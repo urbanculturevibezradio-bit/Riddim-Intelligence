@@ -9,6 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.81.0",
+    "anthropic": "^0.0.0",
+    "dotenv": "^17.3.1",
+    "mongodb": "^7.1.1",
     "next": "16.2.1",
     "react": "19.2.4",
     "react-dom": "19.2.4"
