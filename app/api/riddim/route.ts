@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import clientPromise from '../../../lib/mongodb';
 import { searchRiddims } from '../../../lib/riddimDb';
 import { searchExternalSources } from '../../../lib/externalSearch';
+
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
@@ -24,33 +25,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No question provided' }, { status: 400 });
     }
 
-    // Search verified riddim database first
     const verifiedData = await searchRiddims(question);
-const externalData = await searchExternalSources(question);
+    const externalData = await searchExternalSources(question);
     let contextPrompt = '';
 
     if (verifiedData && verifiedData.length > 0) {
-  const dataString = JSON.stringify(verifiedData, null, 2);
-  contextPrompt = `VERIFIED DATABASE RESULTS — USE ONLY THIS DATA:
+      const dataString = JSON.stringify(verifiedData, null, 2);
+      contextPrompt = `VERIFIED DATABASE RESULTS — USE ONLY THIS DATA:
 ${dataString}
 
 USER QUESTION: ${question}
 
 Answer using ONLY the verified data above. Do not add anything not in this data.`;
-} else if (externalData && externalData.length > 0) {
-  contextPrompt = `EXTERNAL SOURCE DATA — Use this to answer but flag it as sourced externally, not yet in our verified database:
+    } else if (externalData && externalData.length > 0) {
+      contextPrompt = `EXTERNAL SOURCE DATA — Use this to answer but flag it as sourced externally, not yet in our verified database:
 ${externalData}
 
 USER QUESTION: ${question}
 
 Answer using the external data above. Always mention this comes from Riddim Guide or Riddim-ID, not our verified database yet.`;
-} else {
-  contextPrompt = `USER QUESTION: ${question}
+    } else {
+      contextPrompt = `USER QUESTION: ${question}
 
 No verified data found for this query. Follow your strict rules.`;
-}
+    }
 
-    // Log query to MongoDB
     const client = await clientPromise;
     const db = client.db('riddim-intelligence');
     await db.collection('queries').insertOne({
@@ -59,9 +58,8 @@ No verified data found for this query. Follow your strict rules.`;
       timestamp: new Date(),
     });
 
-    // Call Claude
     const message = await anthropic.messages.create({
-      model: 'claude-opus-4-5',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
       system: SYSTEM_PROMPT,
       messages: [
