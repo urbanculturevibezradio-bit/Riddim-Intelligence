@@ -1,4 +1,5 @@
 import clientPromise from './mongodb';
+import { RiddimEntry } from './riddimSchema';
 
 export async function searchRiddims(query: string) {
   try {
@@ -23,7 +24,7 @@ export async function searchRiddims(query: string) {
   }
 }
 
-export async function saveRiddim(riddim: Record<string, unknown>) {
+export async function saveRiddim(riddim: RiddimEntry) {
   try {
     const client = await clientPromise;
     const db = client.db('riddim-intelligence');
