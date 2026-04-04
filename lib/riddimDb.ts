@@ -22,3 +22,15 @@ export async function searchRiddims(query: string) {
     return [];
   }
 }
+
+export async function saveRiddim(riddim: Record<string, unknown>) {
+  try {
+    const client = await clientPromise;
+    const db = client.db('riddim-intelligence');
+    const result = await db.collection('riddims').insertOne(riddim);
+    return result;
+  } catch (error) {
+    console.error('saveRiddim error:', error);
+    throw error;
+  }
+}
