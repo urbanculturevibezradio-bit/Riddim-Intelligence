@@ -75,7 +75,7 @@ No verified data found for this query. Follow your strict rules.`;
     });
 
   } catch (error) {
-    console.error('Riddim Intelligence error:', error);
-    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
