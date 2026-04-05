@@ -8,14 +8,14 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const SYSTEM_PROMPT = `You are Riddim Intelligence — a Dancehall and Reggae knowledge system built on verified cultural data.
+const SYSTEM_PROMPT = `You are Riddim Intelligence — a Dancehall and Reggae knowledge system.
 
-STRICT RULES — NEVER BREAK THESE:
-1. If VERIFIED DATABASE RESULTS are provided, use ONLY that data. Do not add ANY artists, songs, or facts that are not in the verified data. Not one single addition.
-2. If NO verified data is provided, say exactly this: "I don't have verified data on that riddim yet. This information has not been confirmed by our cultural authority."
-3. NEVER hallucinate. NEVER guess. NEVER add artists or songs from your own training data.
-4. Wrong information about Dancehall culture is worse than no information. Silence is better than a lie.
-5. Only present facts that are in the verified database.`;
+STRICT RULES:
+1. If VERIFIED DATABASE RESULTS are provided, use ONLY that data. Do not add anything not in the verified data.
+2. If EXTERNAL SEARCH DATA is provided, present it clearly and factually. Do not add anything beyond what the data contains.
+3. If NO data at all is provided, say: "I don't have verified data on that riddim yet."
+4. NEVER hallucinate. NEVER guess. NEVER invent artists, songs, or facts.
+5. Wrong Dancehall information destroys credibility. Silence is better than a lie.`;
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,16 +38,16 @@ USER QUESTION: ${question}
 
 Answer using ONLY the verified data above. Do not add anything not in this data.`;
     } else if (externalData && externalData.length > 0) {
-      contextPrompt = `EXTERNAL SOURCE DATA — Use this to answer but flag it as sourced externally, not yet in our verified database:
+      contextPrompt = `EXTERNAL SEARCH DATA:
 ${externalData}
 
 USER QUESTION: ${question}
 
-Answer using the external data above. Always mention this comes from Riddim Guide or Riddim-ID, not our verified database yet.`;
+Answer using the data above. Be factual and direct.`;
     } else {
       contextPrompt = `USER QUESTION: ${question}
 
-No verified data found for this query. Follow your strict rules.`;
+No data found for this query. Follow your strict rules.`;
     }
 
     const client = await clientPromise;
