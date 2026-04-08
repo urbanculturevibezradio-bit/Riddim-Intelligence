@@ -1,37 +1,70 @@
-import Anthropic from '@anthropic-ai/sdk';
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
 export async function searchExternalSources(query: string): Promise<string> {
+  const results: string[] = [];
+
   const riddimMatch = query.match(/([a-zA-Z\s]+)\s*riddim/i);
   const searchTerm = riddimMatch
-    ? riddimMatch[1].trim()
-    : query;
+    ? riddimMatch[1].trim().toLowerCase()
+    : query.toLowerCase();
 
+  const urlTerm = encodeURIComponent(searchTerm);
+
+  // Layer 2a — Riddim Guide
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
-      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-      messages: [
-        {
-          role: 'user',
-          content: `Search riddimguide.com and riddim-id.com for information about the "${searchTerm} Riddim". Return only factual data: riddim name, year, producer, label, and list of songs with artists. No commentary.`
-        }
-      ]
+    const url = `https://www.riddimguide.com/tunes?q=${urlTerm}&c=`;
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
     });
-
-    const text = response.content
-      .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-      .map(block => block.text)
-      .join('\n');
-
-    return text || '';
-
+    const text = await res.text();
+    const clean = text
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 2000);
+    if (clean.length > 200 && !clean.includes('nothing was found') && !clean.includes('Not Found')) {
+      results.push(`RIDDIM GUIDE:\n${clean}`);
+    }
   } catch (e) {
-    console.log('External search failed:', e);
-    return '';
+    console.log('Riddim Guide failed:', e);
   }
+
+  // Layer 2b — Riddim-ID
+  try {
+    const url = `https://www.riddim-id.com/search?term=${urlTerm}`;
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+    const text = await res.text();
+    const clean = text
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 2000);
+    if (clean.length > 200 && !clean.includes('No results')) {
+      results.push(`RIDDIM-ID:\n${clean}`);
+    }
+  } catch (e) {
+    console.log('Riddim-ID failed:', e);
+  }
+
+  // Layer 3 — YouTube
+  try {
+    const ytTerm = encodeURIComponent(`${searchTerm} riddim`);
+    const url = `https://www.youtube.com/results?search_query=${ytTerm}`;
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+    const text = await res.text();
+    const clean = text
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 2000);
+    if (clean.length > 200) {
+      results.push(`YOUTUBE:\n${clean}`);
+    }
+  } catch (e) {
+    console.log('YouTube failed:', e);
+  }
+
+  return results.join('\n\n');
 }
