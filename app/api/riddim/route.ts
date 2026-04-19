@@ -78,4 +78,4 @@ No data found for this query. Follow your strict rules.`;
     const message = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}YOu
+}
