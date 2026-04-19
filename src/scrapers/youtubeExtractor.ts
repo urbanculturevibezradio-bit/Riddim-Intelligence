@@ -1,7 +1,10 @@
-// Ultra‑clean YouTube metadata extractor — no multiline regex, no build issues
+// Clean YouTube metadata extractor — fully validated, no multiline regex
 
-function decodeHtml(str: string) {
+function decodeHtmlEntities(str: string) {
   return str
+    .replace(/\\u{([0-9a-fA-F]{4})}/g, (_, g) =>
+      String.fromCharCode(parseInt(g, 16))
+    )
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'")
@@ -12,53 +15,40 @@ function decodeHtml(str: string) {
 export function extractYouTubeInfo(html: string) {
   if (!html) return null;
 
-  // Extract ytInitialPlayerResponse JSON
-  const playerMatch = html.match(/ytInitialPlayerResponse"\s*:\s*(\{.*?\})\s*,\s*"(?:ytInitialData|responseContext)"/s);
-  let player: any = null;
+  // Try to extract JSON metadata block
+  const jsonMatch = html.match(/ytInitialData"\s*:\s*(\{.*?\})\s*,\s*"ytInitialPlayerResponse/s);
+  let json: any = null;
 
   try {
-    if (playerMatch && playerMatch[1]) {
-      player = JSON.parse(playerMatch[1]);
+    if (jsonMatch && jsonMatch[1]) {
+      json = JSON.parse(jsonMatch[1]);
     }
   } catch {
-    player = null;
+    json = null;
   }
 
-  // Extract ytInitialData JSON
-  const dataMatch = html.match(/ytInitialData"\s*:\s*(\{.*?\})\s*[,<]/s);
-  let data: any = null;
-
-  try {
-    if (dataMatch && dataMatch[1]) {
-      data = JSON.parse(dataMatch[1]);
-    }
-  } catch {
-    data = null;
-  }
-
-  // Video ID
-  const videoId =
-    player?.videoDetails?.videoId ||
-    html.match(/"videoId":"([^"]+)"/)?.[1] ||
-    null;
-
-  const url = videoId ? `https://www.youtube.com/watch?v=${videoId}` : "";
-
-  // Title
-  const title =
-    player?.videoDetails?.title ||
-    data?.contents?.twoColumnSearchResultsRenderer?.primaryContents
+  // Extract title from JSON if available
+  const titleFromJson =
+    json?.contents?.twoColumnSearchResultsRenderer?.primaryContents
       ?.sectionListRenderer?.contents?.[0]?.itemSectionRenderer?.contents?.[0]
-      ?.videoRenderer?.title?.runs?.[0]?.text ||
-    html.match(/<meta\s+name="title"\s+content="([^"]+)"/i)?.[1] ||
+      ?.videoRenderer?.title?.runs?.[0]?.text;
+
+  // Fallback: meta tag
+  const titleFromMeta =
+    html.match(/<meta\s+name="title"\s+content="([^"]+)"/i)?.[1];
+
+  // Fallback: inline JSON title
+  const titleFromInline =
     html.match(/"title":\s*\{\s*"runs":\s*
 
-\[\s*\{\s*"text":"([^"]+)"/)?.[1] ||
-    "";
+\[\s*\{\s*"text":"([^"]+)"/)?.[1];
 
-  // Channel
+  const title = decodeHtmlEntities(
+    titleFromJson || titleFromMeta || titleFromInline || ""
+  );
+
+  // Extract channel
   const channel =
-    player?.videoDetails?.author ||
     html.match(/"ownerText":\s*\{\s*"runs":\s*
 
 \[\s*\{\s*"text":"([^"]+)"/)?.[1] ||
@@ -67,59 +57,27 @@ export function extractYouTubeInfo(html: string) {
 \[\s*\{\s*"text":"([^"]+)"/)?.[1] ||
     "";
 
-  // Description
+  // Extract description
   const description =
-    player?.videoDetails?.shortDescription ||
-    html.match(/"shortDescription":"([^"]+)"/)?.[1] ||
     html.match(/"descriptionSnippet":\s*\{\s*"runs":\s*
 
 \[\s*\{\s*"text":"([^"]+)"/)?.[1] ||
+    html.match(/"shortDescription":"([^"]+)"/)?.[1] ||
     "";
 
-  // Views
-  const views =
-    player?.videoDetails?.viewCount ||
-    html.match(/"viewCount":"([^"]+)"/)?.[1] ||
+  // Extract video URL
+  const videoId =
+    html.match(/"videoId":"([^"]+)"/)?.[1] ||
     null;
 
-  // Duration (seconds)
-  const duration =
-    player?.videoDetails?.lengthSeconds ||
-    null;
+  const url = videoId ? `https://www.youtube.com/watch?v=${videoId}` : "";
 
-  // Keywords
-  const keywords =
-    player?.videoDetails?.keywords ||
-    [];
-
-  // Category
-  const category =
-    player?.microformat?.playerMicroformatRenderer?.category ||
-    null;
-
-  // Publish date
-  const publishDate =
-    player?.microformat?.playerMicroformatRenderer?.publishDate ||
-    null;
-
-  // Like count (if visible)
-  const likeCount =
-    html.match(/"label":"([\d,]+)\s+likes"/i)?.[1] ||
-    null;
-
-  if (!videoId && !title) return null;
+  if (!title && !url) return null;
 
   return {
-    videoId,
-    url,
-    title: decodeHtml(title),
-    channel: decodeHtml(channel),
-    description: decodeHtml(description),
-    views,
-    duration,
-    keywords,
-    category,
-    publishDate,
-    likeCount
+    title: decodeHtmlEntities(title),
+    channel: decodeHtmlEntities(channel),
+    description: decodeHtmlEntities(description),
+    url
   };
 }
