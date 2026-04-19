@@ -19,8 +19,8 @@ export async function searchExternalSources(query: string): Promise<string> {
       .replace(/<[^>]+>/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
-      .slice(0, 2000);
-    if (clean.length > 200 && !clean.includes('nothing was found') && !clean.includes('Not Found')) {
+      .slice(0, 3000);
+    if (clean.length > 200 && !clean.includes('nothing was found')) {
       results.push(`RIDDIM GUIDE:\n${clean}`);
     }
   } catch (e) {
@@ -38,7 +38,7 @@ export async function searchExternalSources(query: string): Promise<string> {
       .replace(/<[^>]+>/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
-      .slice(0, 2000);
+      .slice(0, 3000);
     if (clean.length > 200 && !clean.includes('No results')) {
       results.push(`RIDDIM-ID:\n${clean}`);
     }
@@ -58,7 +58,7 @@ export async function searchExternalSources(query: string): Promise<string> {
       .replace(/<[^>]+>/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
-      .slice(0, 2000);
+      .slice(0, 3000);
     if (clean.length > 200) {
       results.push(`YOUTUBE:\n${clean}`);
     }
