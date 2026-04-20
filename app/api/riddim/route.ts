@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import clientPromise from '../../../lib/mongodb';
 import { searchRiddims } from '../../../lib/riddimDb';
-import { searchExternalSources } from '../../../lib/externalSearch';
+import { externalSearch } from '../../../lib/externalSearch';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     }
 
     const verifiedData = await searchRiddims(question);
-    const externalData = await searchExternalSources(question);
+    const externalData = await externalSearch(question);
     let contextPrompt = '';
 
     if (verifiedData && verifiedData.length > 0) {
@@ -38,9 +38,9 @@ ${dataString}
 USER QUESTION: ${question}
 
 Answer using ONLY the verified data above. Do not add anything not in this data.`;
-    } else if (externalData && externalData.length > 0) {
+    } else if (externalData && externalData.results.length > 0) {
       contextPrompt = `EXTERNAL SEARCH DATA:
-${externalData}
+${JSON.stringify(externalData.results, null, 2)}
 
 USER QUESTION: ${question}
 
