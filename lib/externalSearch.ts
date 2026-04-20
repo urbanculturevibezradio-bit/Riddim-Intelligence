@@ -41,6 +41,10 @@ export async function searchExternalSources(query: string): Promise<string> {
     const url = `https://www.riddimguide.com/tunes?q=${urlTerm}&c=`;
     const res = await proxyFetch(url);
     const text = await res.text();
+
+    // DEBUG LOG
+    console.log("RIDDIM GUIDE RAW HTML:", text.slice(0, 2000));
+
     const clean = cleanHTML(text);
 
     if (clean.length > 20 && !clean.includes("nothing was found")) {
@@ -55,6 +59,10 @@ export async function searchExternalSources(query: string): Promise<string> {
     const url = `https://www.riddim-id.com/search?term=${urlTerm}`;
     const res = await proxyFetch(url);
     const text = await res.text();
+
+    // DEBUG LOG
+    console.log("RIDDIM-ID RAW HTML:", text.slice(0, 2000));
+
     const clean = cleanHTML(text);
 
     if (clean.length > 20 && !clean.includes("No results")) {
@@ -70,6 +78,10 @@ export async function searchExternalSources(query: string): Promise<string> {
     const url = `https://www.youtube.com/results?search_query=${ytTerm}`;
     const res = await proxyFetch(url);
     const text = await res.text();
+
+    // DEBUG LOG
+    console.log("YOUTUBE RAW HTML:", text.slice(0, 2000));
+
     const clean = cleanHTML(text);
 
     if (clean.length > 20) {
