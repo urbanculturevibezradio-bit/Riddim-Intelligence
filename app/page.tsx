@@ -16,14 +16,13 @@ export default function Home() {
 
     try {
       const res = await fetch("/api/riddim", {
-
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ question: query }), // ← FIXED
       });
 
       const data = await res.json();
-      setResults(data.results || "No results found.");
+      setResults(data.answer || "No results found."); // ← also fixed to match backend
     } catch (err) {
       setResults("Error fetching results.");
     }
