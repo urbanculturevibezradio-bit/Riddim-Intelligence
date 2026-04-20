@@ -550,9 +550,7 @@ async function searchYouTube(
     );
     const riddimTitle = riddimNameMatch
       ? riddimNameMatch[1].trim()
-      : s.title.replace(/\s*[
-
-\[\(].*$/, "").trim();
+      : s.title.replace(/\s*[\[\(].*$/, "").trim();
 
     // Try to parse year from title or description
     const yearMatch = (s.title + " " + desc).match(/\b(19[89]\d|20[0-2]\d)\b/);
@@ -584,9 +582,7 @@ async function searchYouTube(
         );
         tracks.push({
           artist: featMatch ? featMatch[1].trim() : artistPart,
-          title: titlePart.replace(/\s*[
-
-\[\(].*$/, "").trim(),
+          title: titlePart.replace(/\s*[\[\(].*$/, "").trim(),
           featuring: featMatch ? featMatch[2].trim() : undefined,
         });
       }
