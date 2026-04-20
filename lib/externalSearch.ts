@@ -25,16 +25,23 @@ export async function searchExternalSources(query: string): Promise<string> {
 
   const urlTerm = encodeURIComponent(searchTerm);
 
+  // Shared cleaning logic
+  function cleanHTML(text: string): string {
+    return text
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ") // remove scripts
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")   // remove styles
+      .replace(/<\/?[^>]+>/g, " ")                      // remove tags but keep text
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 5000);
+  }
+
   // Layer 2a — Riddim Guide
   try {
     const url = `https://www.riddimguide.com/tunes?q=${urlTerm}&c=`;
     const res = await proxyFetch(url);
     const text = await res.text();
-    const clean = text
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 3000);
+    const clean = cleanHTML(text);
 
     if (clean.length > 20 && !clean.includes("nothing was found")) {
       results.push(`RIDDIM GUIDE:\n${clean}`);
@@ -48,11 +55,7 @@ export async function searchExternalSources(query: string): Promise<string> {
     const url = `https://www.riddim-id.com/search?term=${urlTerm}`;
     const res = await proxyFetch(url);
     const text = await res.text();
-    const clean = text
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 3000);
+    const clean = cleanHTML(text);
 
     if (clean.length > 20 && !clean.includes("No results")) {
       results.push(`RIDDIM-ID:\n${clean}`);
@@ -67,11 +70,7 @@ export async function searchExternalSources(query: string): Promise<string> {
     const url = `https://www.youtube.com/results?search_query=${ytTerm}`;
     const res = await proxyFetch(url);
     const text = await res.text();
-    const clean = text
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 3000);
+    const clean = cleanHTML(text);
 
     if (clean.length > 20) {
       results.push(`YOUTUBE:\n${clean}`);
