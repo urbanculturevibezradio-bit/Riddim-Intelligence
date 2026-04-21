@@ -631,7 +631,7 @@ export async function externalSearch(
             source: "youtube",
             sourceUrl: `https://www.youtube.com/watch?v=${v.videoId}`,
             confidence: fuzzyScore(query, normalized),
-            raw: v,
+            raw: v as unknown as Record<string, unknown>,
           });
         }
       })()
