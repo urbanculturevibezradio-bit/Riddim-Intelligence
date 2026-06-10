@@ -1,24 +1,33 @@
 {
   "name": "riddim-intelligence",
-  "version": "1.0.0",
-  "description": "This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).",
-  "main": "index.js",
-  "directories": {
-    "lib": "lib"
-  },
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/urbanculturevibezradio-bit/Riddim-Intelligence.git"
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.81.0",
+    "@types/cheerio": "^0.22.35",
+    "anthropic": "^0.0.0",
+    "cheerio": "^1.0.0",
+    "dotenv": "^17.3.1",
+    "jsdom": "^29.0.2",
+    "mongodb": "^7.1.1",
+    "next": "16.2.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/urbanculturevibezradio-bit/Riddim-Intelligence/issues"
-  },
-  "homepage": "https://github.com/urbanculturevibezradio-bit/Riddim-Intelligence#readme"
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.1",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
 }
