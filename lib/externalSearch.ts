@@ -106,27 +106,31 @@ const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
   "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-async function fetchHtml(url: string): Promise<string> {
-  const res = await fetch(url, {
-    headers: { "User-Agent": UA, Accept: "text/html" },
-    redirect: "follow",
-    signal: AbortSignal.timeout(12_000),
+const PROXY_URL = "https://robust-miracle-production-8b8d.up.railway.app/riddim";
+
+async function fetchFromProxy(query: string): Promise<{ youtube: string; riddimGuide: string; riddimId: string }> {
+  const res = await fetch(PROXY_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query }),
+    signal: AbortSignal.timeout(20_000),
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-  return res.text();
+  if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
+  return res.json();
+}
+
+async function fetchHtml(url: string): Promise<string> {
+  // We are now using the proxy, so individual direct fetches are replaced by proxy calls.
+  // This function is now a stub or should be refactored.
+  // For now, I will keep it for compatibility if needed, but it's not used directly.
+  throw new Error("Direct fetchHtml is deprecated, use proxy.");
 }
 
 async function fetchJson<T = unknown>(
   url: string,
   headers?: Record<string, string>
 ): Promise<T> {
-  const res = await fetch(url, {
-    headers: { "User-Agent": UA, Accept: "application/json", ...headers },
-    redirect: "follow",
-    signal: AbortSignal.timeout(12_000),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-  return res.json() as Promise<T>;
+  throw new Error("Direct fetchJson is deprecated, use proxy.");
 }
 
 function clean(text: string | null | undefined): string {
@@ -201,6 +205,18 @@ function searchLocalIndex(query: string, max: number): RiddimResult[] {
 // SECTION 2 — RiddimGuide Scraper (clean + stable)
 // ------------------------------------------------------------
 
+async function fetchDetailFromProxy(url: string): Promise<string> {
+  const res = await fetch(PROXY_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
+  const data = await res.json();
+  return data.html;
+}
+
 async function scrapeRiddimGuide(
   query: string,
   max: number
@@ -208,22 +224,15 @@ async function scrapeRiddimGuide(
   const src = "rg";
   debugLog(src, `Searching RiddimGuide for "${query}" (max ${max})`);
 
-  // Remove trailing "riddim" because RiddimGuide already scopes to riddims
-  const searchQuery = query.replace(/\s+riddim\s*$/i, "").trim() || query;
-
-  const searchUrl =
-    `https://www.riddimguide.com/tunes?q=${encodeURIComponent(searchQuery)}`;
-
-  debugLog(src, `Fetching search page`, searchUrl);
-
-  let html: string;
+  let data: { riddimGuide: string };
   try {
-    html = await fetchHtml(searchUrl);
+    data = await fetchFromProxy(query);
   } catch (err) {
-    debugError(src, "Failed to fetch search page", err);
+    debugError(src, "Failed to fetch from proxy", err);
     return [];
   }
 
+  const html = data.riddimGuide;
   const dom = new JSDOM(html);
   const doc = dom.window.document;
 
@@ -249,8 +258,8 @@ async function scrapeRiddimGuide(
 
   for (const url of uniqueUrls) {
     try {
-      debugLog(src, `Fetching riddim page`, url);
-      const detailHtml = await fetchHtml(url);
+      debugLog(src, `Fetching riddim page via proxy`, url);
+      const detailHtml = await fetchDetailFromProxy(url);
 
       const detailDom = new JSDOM(detailHtml);
       const d = detailDom.window.document;
@@ -299,9 +308,6 @@ async function scrapeRiddimGuide(
   debugLog(src, `RiddimGuide complete — ${results.length} results`);
   return results;
 }
-// ------------------------------------------------------------
-// SECTION 3 — Riddim-ID Scraper (clean + stable)
-// ------------------------------------------------------------
 
 async function scrapeRiddimId(
   query: string,
@@ -310,19 +316,15 @@ async function scrapeRiddimId(
   const src = "ri";
   debugLog(src, `Searching Riddim-ID for "${query}" (max ${max})`);
 
-  const searchUrl =
-    `https://www.riddim-id.org/search?q=${encodeURIComponent(query)}`;
-
-  debugLog(src, `Fetching search page`, searchUrl);
-
-  let html: string;
+  let data: { riddimId: string };
   try {
-    html = await fetchHtml(searchUrl);
+    data = await fetchFromProxy(query);
   } catch (err) {
-    debugError(src, "Failed to fetch search page", err);
+    debugError(src, "Failed to fetch from proxy", err);
     return [];
   }
 
+  const html = data.riddimId;
   const dom = new JSDOM(html);
   const doc = dom.window.document;
 
@@ -371,9 +373,9 @@ async function scrapeRiddimId(
             ? detailUrl
             : `https://www.riddim-id.org${detailUrl}`;
 
-          debugLog(src, `Fetching detail page`, fullUrl);
+          debugLog(src, `Fetching detail page via proxy`, fullUrl);
 
-          const detailHtml = await fetchHtml(fullUrl);
+          const detailHtml = await fetchDetailFromProxy(fullUrl);
           const detailDom = new JSDOM(detailHtml);
           const dd = detailDom.window.document;
 
