@@ -1,0 +1,756 @@
+{
+  "scanned": "2026-08-03",
+  "totalRiddims": 150,
+  "riddims": [
+    {
+      "name": "A Just We Riddim",
+      "bpm": 130.0,
+      "count": 5
+    },
+    {
+      "name": "After Laughter Comes Tears Riddim",
+      "bpm": 87.0,
+      "count": 1
+    },
+    {
+      "name": "Aircraft Riddim",
+      "bpm": 96.0,
+      "count": 1
+    },
+    {
+      "name": "Answer Riddim",
+      "bpm": 88.0,
+      "count": 1
+    },
+    {
+      "name": "Arise Roots Cali Love Cali Roots Riddim",
+      "bpm": 87.0,
+      "count": 1
+    },
+    {
+      "name": "Art Of Love Riddim",
+      "bpm": 87.0,
+      "count": 2
+    },
+    {
+      "name": "Babatunde Riddim",
+      "bpm": 161.1,
+      "count": 1
+    },
+    {
+      "name": "Bad Cologne Riddim",
+      "bpm": 105.0,
+      "count": 1
+    },
+    {
+      "name": "Baddis Riddim",
+      "bpm": 88.7,
+      "count": 2
+    },
+    {
+      "name": "Badenuheriddim",
+      "bpm": 102.3,
+      "count": 1
+    },
+    {
+      "name": "Badenuhnewneweriddim",
+      "bpm": 88.1,
+      "count": 1
+    },
+    {
+      "name": "Badenuriddim",
+      "bpm": 95.0,
+      "count": 1
+    },
+    {
+      "name": "Big Breeze Riddim",
+      "bpm": 101.0,
+      "count": 1
+    },
+    {
+      "name": "Big Vibe Riddim",
+      "bpm": 109.4,
+      "count": 1
+    },
+    {
+      "name": "Black Widow Riddim",
+      "bpm": 99.1,
+      "count": 3
+    },
+    {
+      "name": "Blessings Of Love Riddim",
+      "bpm": 86.0,
+      "count": 1
+    },
+    {
+      "name": "Broken Hearts Riddim",
+      "bpm": 85.0,
+      "count": 1
+    },
+    {
+      "name": "Buzz Riddim",
+      "bpm": 107.2,
+      "count": 2
+    },
+    {
+      "name": "Candy Riddim",
+      "bpm": 122.0,
+      "count": 1
+    },
+    {
+      "name": "Carribean Riddim",
+      "bpm": 160.0,
+      "count": 1
+    },
+    {
+      "name": "Chakka Riddim",
+      "bpm": 100.0,
+      "count": 1
+    },
+    {
+      "name": "Change Riddim",
+      "bpm": 87.0,
+      "count": 6
+    },
+    {
+      "name": "Chicken And Dumplin Riddim",
+      "bpm": 100.0,
+      "count": 2
+    },
+    {
+      "name": "Chris Martin Big Big Aircraft Riddim",
+      "bpm": 96.0,
+      "count": 1
+    },
+    {
+      "name": "Chris Mrtin Cold Hear Riddim",
+      "bpm": 86.0,
+      "count": 1
+    },
+    {
+      "name": "Civil Rights Riddim",
+      "bpm": 148.0,
+      "count": 1
+    },
+    {
+      "name": "Clockwork Riddim",
+      "bpm": 97.9,
+      "count": 1
+    },
+    {
+      "name": "Codeine Riddim",
+      "bpm": 82.0,
+      "count": 4
+    },
+    {
+      "name": "Cool & Deadly Riddim",
+      "bpm": 115.0,
+      "count": 4
+    },
+    {
+      "name": "Cry Love Rapture Riddim",
+      "bpm": 85.0,
+      "count": 1
+    },
+    {
+      "name": "Darrio Murda Law Riddim",
+      "bpm": 94.0,
+      "count": 1
+    },
+    {
+      "name": "David Rodigan Presents Sidewalk Riddim",
+      "bpm": 160.0,
+      "count": 1
+    },
+    {
+      "name": "Denzel Riddim",
+      "bpm": 165.4,
+      "count": 1
+    },
+    {
+      "name": "Denzel Wyfl Riddim",
+      "bpm": 102.8,
+      "count": 2
+    },
+    {
+      "name": "Destiny Riddim",
+      "bpm": 89.0,
+      "count": 4
+    },
+    {
+      "name": "Ding Dong  Watch Dem Aircraft Riddim",
+      "bpm": 96.0,
+      "count": 1
+    },
+    {
+      "name": "Double Trouble Riddim",
+      "bpm": 82.2,
+      "count": 1
+    },
+    {
+      "name": "Dream Lover Love Rapture Riddim",
+      "bpm": 85.0,
+      "count": 1
+    },
+    {
+      "name": "Dub Inc  Resist An Fight  Cali Roots Riddim",
+      "bpm": 87.0,
+      "count": 1
+    },
+    {
+      "name": "Dutty Money Riddim",
+      "bpm": 103.0,
+      "count": 1
+    },
+    {
+      "name": "Duttymoneyriddim",
+      "bpm": 103.0,
+      "count": 1
+    },
+    {
+      "name": "Easy Riddim",
+      "bpm": 150.0,
+      "count": 2
+    },
+    {
+      "name": "Eiable Riddim",
+      "bpm": 96.7,
+      "count": 1
+    },
+    {
+      "name": "Empree Riddim",
+      "bpm": 97.5,
+      "count": 1
+    },
+    {
+      "name": "Empress  Riddim",
+      "bpm": 101.1,
+      "count": 21
+    },
+    {
+      "name": "Empress Riddim",
+      "bpm": 91.0,
+      "count": 2
+    },
+    {
+      "name": "Empressriddim",
+      "bpm": 115.3,
+      "count": 2
+    },
+    {
+      "name": "Enviable Riddim",
+      "bpm": 105.5,
+      "count": 11
+    },
+    {
+      "name": "Episodes Riddim",
+      "bpm": 82.0,
+      "count": 1
+    },
+    {
+      "name": "Eternal Wave Riddim",
+      "bpm": 97.0,
+      "count": 1
+    },
+    {
+      "name": "Eyesopen Riddim",
+      "bpm": 140.0,
+      "count": 1
+    },
+    {
+      "name": "Fade Away Riddim",
+      "bpm": 158.0,
+      "count": 1
+    },
+    {
+      "name": "Feel Good Riddim",
+      "bpm": 106.0,
+      "count": 2
+    },
+    {
+      "name": "Fire Avenue Riddim",
+      "bpm": 89.1,
+      "count": 2
+    },
+    {
+      "name": "Fire Burn Now Riddim",
+      "bpm": 79.0,
+      "count": 2
+    },
+    {
+      "name": "Forward Riddim",
+      "bpm": 86.0,
+      "count": 1
+    },
+    {
+      "name": "Free Up Riddim",
+      "bpm": 111.5,
+      "count": 1
+    },
+    {
+      "name": "Fridriddim",
+      "bpm": 92.5,
+      "count": 1
+    },
+    {
+      "name": "General Riddim",
+      "bpm": 144.0,
+      "count": 1
+    },
+    {
+      "name": "Get A Lick Aka Billie Jean Riddim",
+      "bpm": 80.0,
+      "count": 1
+    },
+    {
+      "name": "Ghettobibleriddim",
+      "bpm": 100.4,
+      "count": 1
+    },
+    {
+      "name": "Good Feels Riddim",
+      "bpm": 116.0,
+      "count": 1
+    },
+    {
+      "name": "Gumngrabbariddim",
+      "bpm": 107.4,
+      "count": 1
+    },
+    {
+      "name": "Hardtimes Riddim",
+      "bpm": 153.4,
+      "count": 1
+    },
+    {
+      "name": "Heathen Riddim",
+      "bpm": 105.0,
+      "count": 2
+    },
+    {
+      "name": "Hello Bacchanal Riddim",
+      "bpm": 126.0,
+      "count": 1
+    },
+    {
+      "name": "Herb Smuggling Riddim",
+      "bpm": 71.0,
+      "count": 1
+    },
+    {
+      "name": "High Rise Riddim",
+      "bpm": 83.0,
+      "count": 6
+    },
+    {
+      "name": "Hot Steel Riddim",
+      "bpm": 97.0,
+      "count": 1
+    },
+    {
+      "name": "Hot Step Riddim",
+      "bpm": 160.0,
+      "count": 2
+    },
+    {
+      "name": "Hotmilk Riddim",
+      "bpm": 79.0,
+      "count": 1
+    },
+    {
+      "name": "Hott Steel Riddim",
+      "bpm": 100.0,
+      "count": 5
+    },
+    {
+      "name": "Jahmiel Money Money Aircraft Riddim",
+      "bpm": 96.0,
+      "count": 1
+    },
+    {
+      "name": "Jahvillani Rubberband Aircraft Riddim",
+      "bpm": 96.0,
+      "count": 1
+    },
+    {
+      "name": "Jamaya Ad Empress Riddim",
+      "bpm": 70.7,
+      "count": 1
+    },
+    {
+      "name": "Jumbie Jab Riddim",
+      "bpm": 134.0,
+      "count": 3
+    },
+    {
+      "name": "Komess Riddim",
+      "bpm": 147.0,
+      "count": 1
+    },
+    {
+      "name": "Lady Saw Walk Out Baddis Ting Riddim",
+      "bpm": 98.0,
+      "count": 1
+    },
+    {
+      "name": "Law Riddim",
+      "bpm": 94.0,
+      "count": 6
+    },
+    {
+      "name": "Life Lesson Riddim",
+      "bpm": 89.2,
+      "count": 1
+    },
+    {
+      "name": "Limited Edition Riddim",
+      "bpm": 100.0,
+      "count": 2
+    },
+    {
+      "name": "Lip Service Riddim",
+      "bpm": 110.0,
+      "count": 2
+    },
+    {
+      "name": "Lorde Riddim",
+      "bpm": 128.0,
+      "count": 2
+    },
+    {
+      "name": "Lunch Time Riddim",
+      "bpm": 145.9,
+      "count": 1
+    },
+    {
+      "name": "Lutan Fyah Knife Inmy Back Na Na Gelriddim",
+      "bpm": 157.0,
+      "count": 1
+    },
+    {
+      "name": "Lutan Fyah Riddim",
+      "bpm": 95.0,
+      "count": 1
+    },
+    {
+      "name": "Magenta Riddim",
+      "bpm": 102.0,
+      "count": 2
+    },
+    {
+      "name": "Marli Wood Riddim",
+      "bpm": 157.0,
+      "count": 3
+    },
+    {
+      "name": "Martial Law Riddim",
+      "bpm": 100.0,
+      "count": 1
+    },
+    {
+      "name": "Mavado Intro Empress Riddim",
+      "bpm": 75.7,
+      "count": 1
+    },
+    {
+      "name": "Mavado Top Shotta Aircraft Riddim",
+      "bpm": 96.0,
+      "count": 1
+    },
+    {
+      "name": "Money Mecca Riddim",
+      "bpm": 98.0,
+      "count": 2
+    },
+    {
+      "name": "My Enemies Riddim",
+      "bpm": 82.5,
+      "count": 3
+    },
+    {
+      "name": "Nah Let You Go Riddim",
+      "bpm": 158.0,
+      "count": 1
+    },
+    {
+      "name": "New Kingston Riddim",
+      "bpm": 90.3,
+      "count": 7
+    },
+    {
+      "name": "No  Love Rapture Riddim",
+      "bpm": 85.0,
+      "count": 1
+    },
+    {
+      "name": "No Money Riddim",
+      "bpm": 82.0,
+      "count": 1
+    },
+    {
+      "name": "No No No Riddim",
+      "bpm": 79.5,
+      "count": 1
+    },
+    {
+      "name": "Nzinga Boom Riddim",
+      "bpm": 82.7,
+      "count": 2
+    },
+    {
+      "name": "Obstacle Riddim",
+      "bpm": 103.0,
+      "count": 1
+    },
+    {
+      "name": "Oga Chux Riddim",
+      "bpm": 160.0,
+      "count": 2
+    },
+    {
+      "name": "Oh Lala Cali Roots Riddim",
+      "bpm": 87.0,
+      "count": 1
+    },
+    {
+      "name": "On D Inside Riddim",
+      "bpm": 111.0,
+      "count": 2
+    },
+    {
+      "name": "Osaka Riddim",
+      "bpm": 104.0,
+      "count": 3
+    },
+    {
+      "name": "Ouji Riddim",
+      "bpm": 81.0,
+      "count": 1
+    },
+    {
+      "name": "Party Bus Riddim",
+      "bpm": 98.0,
+      "count": 3
+    },
+    {
+      "name": "Planet Jab Riddim",
+      "bpm": 81.0,
+      "count": 2
+    },
+    {
+      "name": "Prayer Wata Riddim",
+      "bpm": 156.0,
+      "count": 1
+    },
+    {
+      "name": "Prayer Water Riddim",
+      "bpm": 143.0,
+      "count": 6
+    },
+    {
+      "name": "Prevail Love Rapture Riddim",
+      "bpm": 85.0,
+      "count": 1
+    },
+    {
+      "name": "Promise Land Riddim",
+      "bpm": 141.5,
+      "count": 4
+    },
+    {
+      "name": "Promised Land Riddim",
+      "bpm": 93.8,
+      "count": 4
+    },
+    {
+      "name": "Pull Up Dat     Empress Riddim",
+      "bpm": 146.0,
+      "count": 1
+    },
+    {
+      "name": "Punany Riddim",
+      "bpm": 180.0,
+      "count": 1
+    },
+    {
+      "name": "Raggamuffin Riddim",
+      "bpm": 75.0,
+      "count": 1
+    },
+    {
+      "name": "Raw Dawg Riddim",
+      "bpm": 93.0,
+      "count": 1
+    },
+    {
+      "name": "Recovery  Empress Riddim",
+      "bpm": 105.2,
+      "count": 1
+    },
+    {
+      "name": "Recovery Riddim",
+      "bpm": 103.0,
+      "count": 1
+    },
+    {
+      "name": "Reggae Revolution Riddim",
+      "bpm": 88.0,
+      "count": 5
+    },
+    {
+      "name": "Reggaeville Riddim",
+      "bpm": 85.0,
+      "count": 1
+    },
+    {
+      "name": "Riddim",
+      "bpm": 110.5,
+      "count": 1
+    },
+    {
+      "name": "Riddim Hour Full",
+      "bpm": 105.9,
+      "count": 1
+    },
+    {
+      "name": "Rose Riddim",
+      "bpm": 129.0,
+      "count": 2
+    },
+    {
+      "name": "Run Road Riddim",
+      "bpm": 111.0,
+      "count": 1
+    },
+    {
+      "name": "Sean Paul Born Gyalist Aircraft Riddim",
+      "bpm": 96.0,
+      "count": 1
+    },
+    {
+      "name": "Sexting Riddim",
+      "bpm": 100.0,
+      "count": 6
+    },
+    {
+      "name": "Shensea Trika Treat  Aircraft Riddim",
+      "bpm": 96.0,
+      "count": 1
+    },
+    {
+      "name": "Smile Riddim",
+      "bpm": 83.0,
+      "count": 1
+    },
+    {
+      "name": "Sponji Reggae Riddim",
+      "bpm": 149.6,
+      "count": 1
+    },
+    {
+      "name": "St. Andrew Riddim",
+      "bpm": 89.0,
+      "count": 1
+    },
+    {
+      "name": "State Of Mind Riddim",
+      "bpm": 91.0,
+      "count": 1
+    },
+    {
+      "name": "Straight Step Riddim",
+      "bpm": 152.1,
+      "count": 1
+    },
+    {
+      "name": "Sugar Dumpling Riddim",
+      "bpm": 98.0,
+      "count": 1
+    },
+    {
+      "name": "Summer Riddim",
+      "bpm": 108.0,
+      "count": 1
+    },
+    {
+      "name": "Survive Rankin Skankn Riddim",
+      "bpm": 81.0,
+      "count": 1
+    },
+    {
+      "name": "Switch It Riddim",
+      "bpm": 96.0,
+      "count": 1
+    },
+    {
+      "name": "Switch Up State Of Mind Riddim",
+      "bpm": 91.0,
+      "count": 1
+    },
+    {
+      "name": "Terrifying Riddim",
+      "bpm": 152.6,
+      "count": 1
+    },
+    {
+      "name": "The Downtown Riddim",
+      "bpm": 82.0,
+      "count": 1
+    },
+    {
+      "name": "The Riddim",
+      "bpm": 95.0,
+      "count": 2
+    },
+    {
+      "name": "Truth  Rights Riddim",
+      "bpm": 159.7,
+      "count": 1
+    },
+    {
+      "name": "Vision One Riddim",
+      "bpm": 85.0,
+      "count": 1
+    },
+    {
+      "name": "Voice Preview Empress  Riddim",
+      "bpm": 93.3,
+      "count": 1
+    },
+    {
+      "name": "Walk Out Riddim",
+      "bpm": 122.8,
+      "count": 6
+    },
+    {
+      "name": "We Have The Title Riddim",
+      "bpm": 180.0,
+      "count": 1
+    },
+    {
+      "name": "Weh Dem Fa Riddim",
+      "bpm": 88.0,
+      "count": 1
+    },
+    {
+      "name": "Why Love Rapture Riddim",
+      "bpm": 85.0,
+      "count": 1
+    },
+    {
+      "name": "Why Sacrifice Unity Riddim",
+      "bpm": 146.0,
+      "count": 1
+    },
+    {
+      "name": "Wordsondpower Unity Riddim",
+      "bpm": 146.0,
+      "count": 1
+    },
+    {
+      "name": "Worl Yute Riddim",
+      "bpm": 90.0,
+      "count": 1
+    }
+  ]
+}
