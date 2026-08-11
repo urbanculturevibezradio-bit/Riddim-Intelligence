@@ -5,7 +5,25 @@ This document is the hardcoded recovery map. If any file in `lib/` or `data/` go
 
 ---
 
-## Status: RESTORED & RUNNING (2026-08-11)
+## ⛔ LOCKED: app/page.tsx ⛔
+
+**THIS FILE IS LOCKED. DO NOT MODIFY. DO NOT DELETE.**
+
+Locked commit: `e5f9907`  
+SHA256: `e5f9907720066baf0a90b3258cfa54db4fb90c2b`  
+Title: "Restore YOUR actual page — archive theme, canonical profiles, search results, KnowledgePanel"
+
+### If page.tsx is ever modified or deleted:
+
+```bash
+git checkout e5f9907 -- app/page.tsx
+```
+
+That is the ONLY acceptable recovery. No "improving" the page. No "refactoring" the page. This commit IS the page.
+
+---
+
+## Status: LOCKED & RUNNING (2026-08-11)
 
 | Component | Status | Port/Path |
 |-----------|--------|-----------|

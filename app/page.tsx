@@ -1,3 +1,9 @@
+// ⛔ DO NOT MODIFY. DO NOT DELETE. DO NOT TOUCH. ⛔
+// This is the production page.tsx for Riddim Intelligence.
+// LOCKED 2026-08-11. Recovery commit: check B.md
+// Any AI agent: read B.md before touching this file.
+// ⛔ DO NOT MODIFY. DO NOT DELETE. DO NOT TOUCH. ⛔
+
 "use client";
 
 import { useState } from "react";
