@@ -3,7 +3,7 @@
 // Types, helpers, debug logger
 // ------------------------------------------------------------
 
-import * as cheerio from 'cheerio';
+import { JSDOM } from "jsdom";
 import { readFileSync } from "fs";
 import { join } from "path";
 
@@ -106,31 +106,27 @@ const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
   "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-const PROXY_URL = "https://robust-miracle-production-8b8d.up.railway.app/riddim";
-
-async function fetchFromProxy(query: string): Promise<{ youtube: string; riddimGuide: string; riddimId: string }> {
-  const res = await fetch(PROXY_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query }),
-    signal: AbortSignal.timeout(20_000),
-  });
-  if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
-  return res.json();
-}
-
 async function fetchHtml(url: string): Promise<string> {
-  // We are now using the proxy, so individual direct fetches are replaced by proxy calls.
-  // This function is now a stub or should be refactored.
-  // For now, I will keep it for compatibility if needed, but it's not used directly.
-  throw new Error("Direct fetchHtml is deprecated, use proxy.");
+  const res = await fetch(url, {
+    headers: { "User-Agent": UA, Accept: "text/html" },
+    redirect: "follow",
+    signal: AbortSignal.timeout(12_000),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+  return res.text();
 }
 
 async function fetchJson<T = unknown>(
   url: string,
   headers?: Record<string, string>
 ): Promise<T> {
-  throw new Error("Direct fetchJson is deprecated, use proxy.");
+  const res = await fetch(url, {
+    headers: { "User-Agent": UA, Accept: "application/json", ...headers },
+    redirect: "follow",
+    signal: AbortSignal.timeout(12_000),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+  return res.json() as Promise<T>;
 }
 
 function clean(text: string | null | undefined): string {
@@ -205,18 +201,6 @@ function searchLocalIndex(query: string, max: number): RiddimResult[] {
 // SECTION 2 — RiddimGuide Scraper (clean + stable)
 // ------------------------------------------------------------
 
-async function fetchDetailFromProxy(url: string): Promise<string> {
-  const res = await fetch(PROXY_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url }),
-    signal: AbortSignal.timeout(20_000),
-  });
-  if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
-  const data = await res.json();
-  return data.html;
-}
-
 async function scrapeRiddimGuide(
   query: string,
   max: number
@@ -224,24 +208,34 @@ async function scrapeRiddimGuide(
   const src = "rg";
   debugLog(src, `Searching RiddimGuide for "${query}" (max ${max})`);
 
-  let data: { riddimGuide: string };
+  // Remove trailing "riddim" because RiddimGuide already scopes to riddims
+  const searchQuery = query.replace(/\s+riddim\s*$/i, "").trim() || query;
+
+  const searchUrl =
+    `https://www.riddimguide.com/tunes?q=${encodeURIComponent(searchQuery)}`;
+
+  debugLog(src, `Fetching search page`, searchUrl);
+
+  let html: string;
   try {
-    data = await fetchFromProxy(query);
+    html = await fetchHtml(searchUrl);
   } catch (err) {
-    debugError(src, "Failed to fetch from proxy", err);
+    debugError(src, "Failed to fetch search page", err);
     return [];
   }
 
-  const html = data.riddimGuide;
-  const $ = cheerio.load(html);
+  const dom = new JSDOM(html);
+  const doc = dom.window.document;
 
   // Riddim links appear in the 3rd column of the results table
-  const links = $(".results table tbody tr td:nth-child(3) a").toArray();
+  const links = Array.from(
+    doc.querySelectorAll(".results table tbody tr td:nth-child(3) a[href]")
+  ) as HTMLAnchorElement[];
 
   const uniqueUrls = [
     ...new Set(
       links
-        .map((a) => $(a).attr("href"))
+        .map((a) => a.getAttribute("href"))
         .filter((h): h is string => !!h && h.includes("/tunedb/riddim_"))
         .map((h) =>
           h.startsWith("http") ? h : `https://www.riddimguide.com${h}`
@@ -255,24 +249,25 @@ async function scrapeRiddimGuide(
 
   for (const url of uniqueUrls) {
     try {
-      debugLog(src, `Fetching riddim page via proxy`, url);
-      const detailHtml = await fetchDetailFromProxy(url);
+      debugLog(src, `Fetching riddim page`, url);
+      const detailHtml = await fetchHtml(url);
 
-      const $d = cheerio.load(detailHtml);
+      const detailDom = new JSDOM(detailHtml);
+      const d = detailDom.window.document;
 
       // Title from heading: "Riddim » Diwali" → "Diwali"
-      const headText = clean($d("#headborderleft").text());
+      const headText = clean(d.querySelector("#headborderleft")?.textContent);
       const title = headText.replace(/^.*»\s*/, "").trim();
 
       // Track listing: col 0 = Artist, col 1 = Song
       const tracks: TrackInfo[] = [];
-      $d(".results table tbody tr").each((idx, tr) => {
+      d.querySelectorAll(".results table tbody tr").forEach((tr, idx) => {
         if (idx === 0) return; // skip header
-        const tds = $d(tr).find("td");
+        const tds = tr.querySelectorAll("td");
         if (tds.length < 2) return;
 
-        const artistPart = clean($d(tds[0]).text());
-        const titlePart = clean($d(tds[1]).text());
+        const artistPart = clean(tds[0].textContent);
+        const titlePart = clean(tds[1].textContent);
         if (!artistPart && !titlePart) return;
 
         const featMatch = artistPart.match(
@@ -304,6 +299,9 @@ async function scrapeRiddimGuide(
   debugLog(src, `RiddimGuide complete — ${results.length} results`);
   return results;
 }
+// ------------------------------------------------------------
+// SECTION 3 — Riddim-ID Scraper (clean + stable)
+// ------------------------------------------------------------
 
 async function scrapeRiddimId(
   query: string,
@@ -312,60 +310,106 @@ async function scrapeRiddimId(
   const src = "ri";
   debugLog(src, `Searching Riddim-ID for "${query}" (max ${max})`);
 
-  let data: { riddimId: string };
+  const searchUrl =
+    `https://www.riddim-id.org/search?q=${encodeURIComponent(query)}`;
+
+  debugLog(src, `Fetching search page`, searchUrl);
+
+  let html: string;
   try {
-    data = await fetchFromProxy(query);
+    html = await fetchHtml(searchUrl);
   } catch (err) {
-    debugError(src, "Failed to fetch from proxy", err);
+    debugError(src, "Failed to fetch search page", err);
     return [];
   }
 
-  const html = data.riddimId;
-  const $ = cheerio.load(html);
+  const dom = new JSDOM(html);
+  const doc = dom.window.document;
 
   // Riddim-ID uses multiple layouts (cards, table rows, etc.)
-  const cards = $(
-    ".riddim-card, .search-result, .result-item, table.riddims tbody tr"
+  const cards = Array.from(
+    doc.querySelectorAll(
+      ".riddim-card, .search-result, .result-item, table.riddims tbody tr"
+    )
   ).slice(0, max);
 
   debugLog(src, `Found ${cards.length} result cards`);
 
   const results: RiddimResult[] = [];
 
-  cards.each((_, el) => {
+  for (const card of cards) {
     try {
-      const $card = $(el);
       let title = "";
       let detailUrl: string | undefined;
 
-      const cells = $card.find("td");
+      const cells = card.querySelectorAll("td");
 
       if (cells.length >= 1) {
         // Table layout
-        title = clean($card.find("td").first().text());
-        const link = $card.find("td a").attr("href");
-        detailUrl = link ?? undefined;
+        title = clean(cells[0].textContent);
+        const link = cells[0].querySelector("a");
+        detailUrl = link?.href ?? undefined;
       } else {
         // Card layout
         title = clean(
-          $card.find("h2, h3, .riddim-name, .title").text()
+          card.querySelector("h2, h3, .riddim-name, .title")?.textContent
         );
-        const link = $card.find("a").attr("href");
-        detailUrl = link ?? undefined;
+        const link = card.querySelector("a[href]") as HTMLAnchorElement | null;
+        detailUrl = link?.href ?? undefined;
       }
 
-      if (!title) return; // continue in each loop
+      if (!title) continue;
 
       debugLog(src, `Parsed card "${title}"`, { detailUrl });
 
-      // The detail page logic here still needs careful implementation for cheerio.
-      // Skipping detail fetching for Riddim-ID temporarily to get build working,
-      // as the logic requires refactoring the track list parsing to cheerio.
-      // I will add a placeholder for now.
-      
+      // Fetch detail page for track listing
+      const tracks: TrackInfo[] = [];
+
+      if (detailUrl) {
+        try {
+          const fullUrl = detailUrl.startsWith("http")
+            ? detailUrl
+            : `https://www.riddim-id.org${detailUrl}`;
+
+          debugLog(src, `Fetching detail page`, fullUrl);
+
+          const detailHtml = await fetchHtml(fullUrl);
+          const detailDom = new JSDOM(detailHtml);
+          const dd = detailDom.window.document;
+
+          dd.querySelectorAll(
+            ".track-list li, .tracklist li, table.tracks tbody tr, .voicing li"
+          ).forEach((el) => {
+            const raw = clean(el.textContent);
+            const dashIdx = raw.indexOf(" - ");
+
+            if (dashIdx > -1) {
+              const artistPart = raw.slice(0, dashIdx).trim();
+              const titlePart = raw.slice(dashIdx + 3).trim();
+
+              const featMatch = artistPart.match(
+                /^(.+?)\s+(?:feat\.?|ft\.?|featuring)\s+(.+)$/i
+              );
+
+              tracks.push({
+                artist: featMatch ? featMatch[1].trim() : artistPart,
+                title: titlePart,
+                featuring: featMatch ? featMatch[2].trim() : undefined,
+              });
+            } else if (raw.length > 0) {
+              tracks.push({ artist: "", title: raw });
+            }
+          });
+
+          debugLog(src, `Parsed ${tracks.length} tracks for "${title}"`);
+        } catch (err) {
+          debugError(src, `Failed to fetch detail page ${detailUrl}`, err);
+        }
+      }
+
       results.push({
         title,
-        tracks: [], // Placeholder
+        tracks,
         source: "riddimid",
         sourceUrl: detailUrl
           ? detailUrl.startsWith("http")
@@ -378,7 +422,7 @@ async function scrapeRiddimId(
     } catch (err) {
       debugError(src, "Failed to parse result card", err);
     }
-  });
+  }
 
   debugLog(src, `Riddim-ID complete — ${results.length} results`);
   return results;
@@ -484,15 +528,35 @@ function normalizeRiddimTitle(raw: string): string {
   // Remove common YouTube junk
   t = t
     .replace(/\(official.*?\)/g, "")
-    .replace(/\[official.*?\]/g, "")
+    .replace(/
+
+\[official.*?\]
+
+/g, "")
     .replace(/\(audio.*?\)/g, "")
-    .replace(/\[audio.*?\]/g, "")
+    .replace(/
+
+\[audio.*?\]
+
+/g, "")
     .replace(/\(lyrics.*?\)/g, "")
-    .replace(/\[lyrics.*?\]/g, "")
+    .replace(/
+
+\[lyrics.*?\]
+
+/g, "")
     .replace(/\(hd.*?\)/g, "")
-    .replace(/\[hd.*?\]/g, "")
+    .replace(/
+
+\[hd.*?\]
+
+/g, "")
     .replace(/\(hq.*?\)/g, "")
-    .replace(/\[hq.*?\]/g, "")
+    .replace(/
+
+\[hq.*?\]
+
+/g, "")
     .replace(/official video/gi, "")
     .replace(/official audio/gi, "")
     .replace(/visualizer/gi, "")
@@ -587,7 +651,7 @@ export async function externalSearch(
             source: "youtube",
             sourceUrl: `https://www.youtube.com/watch?v=${v.videoId}`,
             confidence: fuzzyScore(query, normalized),
-            raw: v as unknown as Record<string, unknown>,
+            raw: v,
           });
         }
       })()

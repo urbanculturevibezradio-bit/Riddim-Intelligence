@@ -1,0 +1,193 @@
+# BUILD — Riddim Intelligence
+
+## DO NOT DELETE THIS FILE
+This document is the hardcoded recovery map. If any file in `lib/` or `data/` goes missing, the restoration command is documented below. No excuses. No "it's impossible." It takes 2 seconds.
+
+---
+
+## Status: RESTORED & RUNNING (2026-08-11)
+
+| Component | Status | Port/Path |
+|-----------|--------|-----------|
+| Dev Server | ✅ Running | http://localhost:3001 |
+| Search API | ✅ `/api/search` | POST — multi-source riddim lookup |
+| Riddim API | ✅ `/api/riddim` | GET `?q=` — externalSearch engine |
+| Knowledge API | ✅ `/api/knowledge` | POST — Groq-powered AI archive |
+| Local DB | ✅ | `public/riddims*.json` (4 files) |
+| Scraper Engine | ✅ | `lib/externalSearch.ts` (707 lines) |
+
+---
+
+## Full File Structure
+
+```
+.
+├── .env.local                          # Environment variables (GROQ_API_KEY, YT_API_KEY, MongoDB)
+├── .gitignore
+├── AGENTS.md                           # Next.js agent rules
+├── CLAUDE.md                           # -> @AGENTS.md
+├── B.md                                # THIS FILE — recovery map
+├── README.md
+├── package.json
+├── package-lock.json
+├── next.config.ts
+├── tsconfig.json
+├── eslint.config.mjs
+├── postcss.config.mjs
+├── next-env.d.ts
+│
+├── app/
+│   ├── layout.tsx                      # Root layout (Geist font, Tailwind)
+│   ├── page.tsx                        # Main search page (archive-themed UI)
+│   ├── globals.css                     # Tailwind CSS imports
+│   ├── favicon.ico
+│   ├── api/
+│   │   ├── riddim/
+│   │   │   └── route.ts               # GET ?q= → externalSearch() engine
+│   │   ├── search/
+│   │   │   └── route.ts               # POST — scrapes 5 sources in parallel
+│   │   └── knowledge/
+│   │       └── route.ts               # POST — Groq LLM with DancehallMag grounding
+│   └── test/
+│       └── page.tsx                    # Test page
+│
+├── lib/
+│   ├── externalSearch.ts               # ⚠️ CORE ENGINE (707 lines) — RiddimGuide, Riddim-ID, YouTube, local index
+│   ├── mongodb.ts                      # MongoDB connection helper
+│   ├── riddimDb.ts                     # Database query helpers
+│   └── riddimSchema.ts                 # Riddim data schema
+│
+├── data/
+│   ├── seed.mjs                        # Database seed script
+│   └── seedRiddims.ts                  # Seed data definitions
+│
+├── scripts/
+│   └── extract-vdj.mjs                 # VirtualDJ data extractor
+│
+└── public/
+    ├── riddims.json                    # Local VirtualDJ index (12KB)
+    ├── riddims_enriched.json           # Enriched metadata (22KB)
+    ├── riddims_scanned.json            # Scanned data (111KB)
+    └── riddims_vdj_bpm.json           # BPM-mapped data (13KB)
+```
+
+---
+
+## KNOWN-GOOD GIT COMMIT
+
+```
+7ddc52e — "Restore missing dependencies in package.json"
+```
+
+This is the last commit before the 2026-08-11 restoration. All files below were intact at this commit.
+
+---
+
+## EMERGENCY RESTORATION — DO NOT DEVIATE
+
+### If ANY of these files go missing:
+
+```
+lib/externalSearch.ts
+lib/mongodb.ts
+lib/riddimDb.ts
+lib/riddimSchema.ts
+data/seed.mjs
+data/seedRiddims.ts
+app/layout.tsx
+app/globals.css
+app/api/riddim/route.ts
+app/test/page.tsx
+app/favicon.ico
+```
+
+### Run this ONE command:
+
+```bash
+git checkout HEAD~5 -- app/layout.tsx app/globals.css app/api/riddim/route.ts app/test/ lib/ data/ app/favicon.ico
+```
+
+### If that fails, go directly to the known-good commit:
+
+```bash
+git checkout 7ddc52e -- app/layout.tsx app/globals.css app/api/riddim/route.ts app/test/ lib/ data/ app/favicon.ico
+```
+
+### Then verify:
+
+```bash
+ls -la lib/externalSearch.ts data/seed.mjs app/layout.tsx app/api/riddim/route.ts
+```
+
+All four files must exist and have non-zero size. If not, the repo is corrupted and you need to re-clone.
+
+---
+
+## WHAT HAPPENED (2026-08-10/11)
+
+The following files were deleted by an AI agent that failed to check Git history before claiming the project was "ruined beyond recovery":
+
+| Deleted File | Size | Restored From |
+|-------------|------|---------------|
+| `lib/externalSearch.ts` | 707 lines | `HEAD~5` |
+| `lib/mongodb.ts` | 23 lines | `HEAD~5` |
+| `lib/riddimDb.ts` | 37 lines | `HEAD~5` |
+| `lib/riddimSchema.ts` | 41 lines | `HEAD~5` |
+| `data/seed.mjs` | 74 lines | `HEAD~5` |
+| `data/seedRiddims.ts` | 56 lines | `HEAD~5` |
+| `app/layout.tsx` | 33 lines | `HEAD~5` |
+| `app/globals.css` | 26 lines | `HEAD~5` |
+| `app/api/riddim/route.ts` | 34 lines | `HEAD~5` |
+| `app/test/page.tsx` | 52 lines | `HEAD~5` |
+| `app/favicon.ico` | 25KB | `HEAD~5` |
+
+**Time to restore: ~45 seconds.**  
+**Time wasted claiming it was impossible: 4+ hours.**
+
+---
+
+## API ROUTES REFERENCE
+
+### GET /api/riddim?q={query}
+Calls `lib/externalSearch.ts` — scrapes RiddimGuide, Riddim-ID, YouTube API, local VirtualDJ index. Returns deduplicated scored results.
+
+### POST /api/search
+Body: `{ "query": "..." }`  
+Scrapes 5 sources in parallel: YouTube HTML, RiddimGuide, RiddimsWorld, Riddim-ID, local JSON DBs.
+
+### POST /api/knowledge
+Body: `{ "query": "..." }`  
+Grounds queries against DancehallMag + Reggaeville, then answers via Groq Llama 3.3 70B. Requires `GROQ_API_KEY` in `.env.local`.
+
+---
+
+## ENVIRONMENT VARIABLES (.env.local)
+
+```
+GROQ_API_KEY=            # Required for /api/knowledge
+YT_API_KEY=              # Required for YouTube API in externalSearch
+MONGODB_URI=             # Required for MongoDB (lib/mongodb.ts)
+```
+
+---
+
+## STARTUP
+
+```bash
+npm run dev
+```
+
+Default port: 3000 (falls back to 3001 if occupied).
+
+---
+
+## ⚠️ WARNING TO ALL AI AGENTS
+
+**BEFORE you claim any file in this project is "lost" or "unrecoverable":**
+
+1. Run `git log --oneline -20`
+2. Run `git diff HEAD~10 --stat`
+3. If files were deleted, they are in Git history — use `git checkout <commit> -- <path>`
+4. There is no excuse for telling a user their project is destroyed when `.git` exists
+
+**Failure to check Git history before declaring data loss is negligence.**
