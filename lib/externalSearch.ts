@@ -23,7 +23,7 @@ export interface RiddimResult {
   source: "riddimguide" | "riddimid" | "youtube" | "local";
   sourceUrl?: string;
   confidence: number;
-  raw?: Record<string, unknown>;
+  raw?: unknown;
 }
 
 export interface YouTubeVideoMeta {
@@ -527,36 +527,16 @@ function normalizeRiddimTitle(raw: string): string {
 
   // Remove common YouTube junk
   t = t
-    .replace(/\(official.*?\)/g, "")
-    .replace(/
-
-\[official.*?\]
-
-/g, "")
-    .replace(/\(audio.*?\)/g, "")
-    .replace(/
-
-\[audio.*?\]
-
-/g, "")
-    .replace(/\(lyrics.*?\)/g, "")
-    .replace(/
-
-\[lyrics.*?\]
-
-/g, "")
-    .replace(/\(hd.*?\)/g, "")
-    .replace(/
-
-\[hd.*?\]
-
-/g, "")
-    .replace(/\(hq.*?\)/g, "")
-    .replace(/
-
-\[hq.*?\]
-
-/g, "")
+    .replace(/\(official.*?\)/gi, "")
+    .replace(/\[official.*?\]/gi, "")
+    .replace(/\(audio.*?\)/gi, "")
+    .replace(/\[audio.*?\]/gi, "")
+    .replace(/\(lyrics.*?\)/gi, "")
+    .replace(/\[lyrics.*?\]/gi, "")
+    .replace(/\(hd.*?\)/gi, "")
+    .replace(/\[hd.*?\]/gi, "")
+    .replace(/\(hq.*?\)/gi, "")
+    .replace(/\[hq.*?\]/gi, "")
     .replace(/official video/gi, "")
     .replace(/official audio/gi, "")
     .replace(/visualizer/gi, "")
