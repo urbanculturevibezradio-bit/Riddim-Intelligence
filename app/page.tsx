@@ -15,26 +15,14 @@ export default function Home() {
     setResults("");
 
     try {
-      const res = await fetch(`/api/riddim?q=${encodeURIComponent(query)}`);
+      const res = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
 
       const data = await res.json();
-      if (!res.ok) {
-        setResults(`Error: ${data.error || res.statusText}`);
-        return;
-      }
-
-      if (!data.results?.length) {
-        setResults("No results found.");
-        return;
-      }
-
-      const lines = data.results.map((r: any) => {
-        const tracks = r.tracks?.length
-          ? r.tracks.slice(0, 3).map((t: any) => `  • ${t.artist} – ${t.title}`).join("\n")
-          : "  (no tracklist)";
-        return `[${r.source.toUpperCase()}] ${r.title} (${Math.round(r.confidence * 100)}%)\n${tracks}`;
-      });
-      setResults(lines.join("\n\n"));
+      setResults(data.results || "No results found.");
     } catch (err) {
       setResults("Error fetching results.");
     }
