@@ -10,7 +10,7 @@ import { useState } from "react";
 
 const QUICK_RIDDIMS = ["Stalag", "Diwali", "Sleng Teng", "Tempo", "Dutty Money", "Real Rock", "Cuss Cuss", "Pepperseed"];
 
-function extractConsensus(results: any) {
+function extractConsensus(results: any, query?: string) {
   const entries: any[] = [];
   const sources = ["riddimguide", "riddimsworld", "youtube", "riddimid", "local"];
   
@@ -30,13 +30,30 @@ function extractConsensus(results: any) {
     return true;
   });
 
+  // Prefer entries whose name matches the user's search query
+  if (query) {
+    const qLower = query.toLowerCase();
+    unique.sort((a, b) => {
+      const aMatch = a.name.toLowerCase().includes(qLower) ? 0 : 1;
+      const bMatch = b.name.toLowerCase().includes(qLower) ? 0 : 1;
+      return aMatch - bMatch;
+    });
+  }
+
   const allTracks: any[] = [];
   const allYears: string[] = [];
   const allLabels = new Set<string>();
   const allNames = new Set<string>();
   
   for (const e of unique) {
-    for (const t of (e.tracks || [])) allTracks.push(t);
+    for (const t of (e.tracks || [])) {
+      if (typeof t === "string") {
+        const dash = t.indexOf(" - ");
+        allTracks.push({ artist: dash > 0 ? t.slice(0, dash).trim() : "", title: dash > 0 ? t.slice(dash + 3).trim() : t });
+      } else {
+        allTracks.push(t);
+      }
+    }
     if (e.label) allLabels.add(e.label);
     allNames.add(e.name);
     const ym = (e.name + (e.label || "")).match(/\b(19|20)\d{2}\b/g);
@@ -78,7 +95,7 @@ export default function Home() {
       const res = await fetch("/api/search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query: term }) });
       const data = await res.json();
       setResults(data);
-      const consensus = extractConsensus(data);
+      const consensus = extractConsensus(data, term);
       setProfile(consensus);
     } catch (e: any) {
       setResults({ error: e.message });
