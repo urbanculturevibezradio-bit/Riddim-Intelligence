@@ -9,21 +9,21 @@ This document is the hardcoded recovery map. If any file in `lib/` or `data/` go
 
 **THIS FILE IS LOCKED. DO NOT MODIFY. DO NOT DELETE.**
 
-Locked commit: `e5f9907`  
-SHA256: `e5f9907720066baf0a90b3258cfa54db4fb90c2b`  
-Title: "Restore YOUR actual page — archive theme, canonical profiles, search results, KnowledgePanel"
+Locked commit: `456fbe3`  
+SHA256: `456fbe3cb04efce4cbd1188a09e167bd7af86734`  
+Title: "Fix: Dutty Money & Tempo search crash in extractConsensus" (final page.tsx — archive UI + crash fix)
 
 ### If page.tsx is ever modified or deleted:
 
 ```bash
-git checkout e5f9907 -- app/page.tsx
+git checkout 456fbe3 -- app/page.tsx
 ```
 
 That is the ONLY acceptable recovery. No "improving" the page. No "refactoring" the page. This commit IS the page.
 
 ---
 
-## Status: LOCKED & RUNNING (2026-08-11)
+## Status: LOCKED & RUNNING (2026-08-12)
 
 | Component | Status | Port/Path |
 |-----------|--------|-----------|
@@ -32,7 +32,7 @@ That is the ONLY acceptable recovery. No "improving" the page. No "refactoring" 
 | Riddim API | ✅ `/api/riddim` | GET `?q=` — externalSearch engine |
 | Knowledge API | ✅ `/api/knowledge` | POST — Groq-powered AI archive |
 | Local DB | ✅ | `public/riddims*.json` (4 files) |
-| Scraper Engine | ✅ | `lib/externalSearch.ts` (707 lines) |
+| Scraper Engine | ✅ | `lib/externalSearch.ts` (680 lines, cheerio) |
 
 ---
 
@@ -70,7 +70,7 @@ That is the ONLY acceptable recovery. No "improving" the page. No "refactoring" 
 │       └── page.tsx                    # Test page
 │
 ├── lib/
-│   ├── externalSearch.ts               # ⚠️ CORE ENGINE (707 lines) — RiddimGuide, Riddim-ID, YouTube, local index
+│   ├── externalSearch.ts               # ⚠️ CORE ENGINE (680 lines, cheerio) — RiddimGuide, Riddim-ID, YouTube, local index
 │   ├── mongodb.ts                      # MongoDB connection helper
 │   ├── riddimDb.ts                     # Database query helpers
 │   └── riddimSchema.ts                 # Riddim data schema
@@ -94,10 +94,10 @@ That is the ONLY acceptable recovery. No "improving" the page. No "refactoring" 
 ## KNOWN-GOOD GIT COMMIT
 
 ```
-7ddc52e — "Restore missing dependencies in package.json"
+4cc3aac — "Fix: 'Create Next App' title + /api/riddim 500 (jsdom -> cheerio)"
 ```
 
-This is the last commit before the 2026-08-11 restoration. All files below were intact at this commit.
+Latest known-good commit (2026-08-12). This is the first commit where `lib/externalSearch.ts` uses `cheerio` (NOT `jsdom`). All files below are intact at this commit.
 
 ---
 
@@ -122,14 +122,12 @@ app/favicon.ico
 ### Run this ONE command:
 
 ```bash
-git checkout HEAD~5 -- app/layout.tsx app/globals.css app/api/riddim/route.ts app/test/ lib/ data/ app/favicon.ico
+git checkout 4cc3aac -- app/layout.tsx app/globals.css app/api/riddim/route.ts app/test/ lib/ data/ app/favicon.ico
 ```
 
-### If that fails, go directly to the known-good commit:
+### ⚠️ Do NOT restore from `HEAD~5` or `7ddc52e`
 
-```bash
-git checkout 7ddc52e -- app/layout.tsx app/globals.css app/api/riddim/route.ts app/test/ lib/ data/ app/favicon.ico
-```
+Those resolve to the OLD `jsdom` version of `lib/externalSearch.ts`. `jsdom` does not load on Vercel's serverless runtime and makes `/api/riddim` return HTTP 500. The only known-good source is `4cc3aac` (the `cheerio` version).
 
 ### Then verify:
 
