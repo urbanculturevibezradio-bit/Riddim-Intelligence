@@ -3,7 +3,7 @@
 // Types, helpers, debug logger
 // ------------------------------------------------------------
 
-import { JSDOM } from "jsdom";
+import * as cheerio from "cheerio";
 import { readFileSync } from "fs";
 import { join } from "path";
 
@@ -224,18 +224,15 @@ async function scrapeRiddimGuide(
     return [];
   }
 
-  const dom = new JSDOM(html);
-  const doc = dom.window.document;
+  const $ = cheerio.load(html);
 
   // Riddim links appear in the 3rd column of the results table
-  const links = Array.from(
-    doc.querySelectorAll(".results table tbody tr td:nth-child(3) a[href]")
-  ) as HTMLAnchorElement[];
+  const links = $(".results table tbody tr td:nth-child(3) a[href]").toArray();
 
   const uniqueUrls = [
     ...new Set(
       links
-        .map((a) => a.getAttribute("href"))
+        .map((a) => $(a).attr("href"))
         .filter((h): h is string => !!h && h.includes("/tunedb/riddim_"))
         .map((h) =>
           h.startsWith("http") ? h : `https://www.riddimguide.com${h}`
@@ -252,22 +249,21 @@ async function scrapeRiddimGuide(
       debugLog(src, `Fetching riddim page`, url);
       const detailHtml = await fetchHtml(url);
 
-      const detailDom = new JSDOM(detailHtml);
-      const d = detailDom.window.document;
+      const $d = cheerio.load(detailHtml);
 
       // Title from heading: "Riddim » Diwali" → "Diwali"
-      const headText = clean(d.querySelector("#headborderleft")?.textContent);
+      const headText = clean($d("#headborderleft").text());
       const title = headText.replace(/^.*»\s*/, "").trim();
 
       // Track listing: col 0 = Artist, col 1 = Song
       const tracks: TrackInfo[] = [];
-      d.querySelectorAll(".results table tbody tr").forEach((tr, idx) => {
+      $d(".results table tbody tr").each((idx, tr) => {
         if (idx === 0) return; // skip header
-        const tds = tr.querySelectorAll("td");
+        const tds = $d(tr).find("td");
         if (tds.length < 2) return;
 
-        const artistPart = clean(tds[0].textContent);
-        const titlePart = clean(tds[1].textContent);
+        const artistPart = clean($d(tds[0]).text());
+        const titlePart = clean($d(tds[1]).text());
         if (!artistPart && !titlePart) return;
 
         const featMatch = artistPart.match(
@@ -323,39 +319,37 @@ async function scrapeRiddimId(
     return [];
   }
 
-  const dom = new JSDOM(html);
-  const doc = dom.window.document;
+  const $ = cheerio.load(html);
 
   // Riddim-ID uses multiple layouts (cards, table rows, etc.)
-  const cards = Array.from(
-    doc.querySelectorAll(
-      ".riddim-card, .search-result, .result-item, table.riddims tbody tr"
-    )
-  ).slice(0, max);
+  const cards = $(
+    ".riddim-card, .search-result, .result-item, table.riddims tbody tr"
+  )
+    .slice(0, max)
+    .toArray();
 
   debugLog(src, `Found ${cards.length} result cards`);
 
   const results: RiddimResult[] = [];
 
-  for (const card of cards) {
+  for (const el of cards) {
+    const card = $(el);
     try {
       let title = "";
       let detailUrl: string | undefined;
 
-      const cells = card.querySelectorAll("td");
+      const cells = card.find("td");
 
       if (cells.length >= 1) {
         // Table layout
-        title = clean(cells[0].textContent);
-        const link = cells[0].querySelector("a");
-        detailUrl = link?.href ?? undefined;
+        title = clean(cells.first().text());
+        detailUrl = cells.first().find("a").attr("href") ?? undefined;
       } else {
         // Card layout
         title = clean(
-          card.querySelector("h2, h3, .riddim-name, .title")?.textContent
+          card.find("h2, h3, .riddim-name, .title").first().text()
         );
-        const link = card.querySelector("a[href]") as HTMLAnchorElement | null;
-        detailUrl = link?.href ?? undefined;
+        detailUrl = card.find("a").first().attr("href") ?? undefined;
       }
 
       if (!title) continue;
@@ -374,13 +368,12 @@ async function scrapeRiddimId(
           debugLog(src, `Fetching detail page`, fullUrl);
 
           const detailHtml = await fetchHtml(fullUrl);
-          const detailDom = new JSDOM(detailHtml);
-          const dd = detailDom.window.document;
+          const $dd = cheerio.load(detailHtml);
 
-          dd.querySelectorAll(
+          $dd(
             ".track-list li, .tracklist li, table.tracks tbody tr, .voicing li"
-          ).forEach((el) => {
-            const raw = clean(el.textContent);
+          ).each((_, li) => {
+            const raw = clean($dd(li).text());
             const dashIdx = raw.indexOf(" - ");
 
             if (dashIdx > -1) {
