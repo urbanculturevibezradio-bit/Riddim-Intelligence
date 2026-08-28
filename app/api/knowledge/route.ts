@@ -92,10 +92,37 @@ async function fetchSourceContext(query: string): Promise<string> {
   return sources.join("\n\n");
 }
 
+// Try primary model first; fall back if Groq reports the model is gone.
+const MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
+
 export async function POST(req: NextRequest) {
-  const { query } = await req.json();
-  if (!query) return NextResponse.json({ error: "No query" }, { status: 400 });
-  if (!GROQ_KEY) return NextResponse.json({ error: "Knowledge agent not configured" }, { status: 500 });
+  let body: any = {};
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid JSON", answer: "The Archive is temporarily unavailable." },
+      { status: 400 }
+    );
+  }
+
+  const query = String(body?.query ?? "").trim();
+  if (!query) {
+    return NextResponse.json(
+      { error: "No query", answer: "The Archive has no record matching this inquiry." },
+      { status: 400 }
+    );
+  }
+  if (!GROQ_KEY) {
+    return NextResponse.json(
+      {
+        error: "GROQ_API_KEY not configured",
+        answer: "The Archive is temporarily unavailable. Consult the pressing logs directly.",
+        source: "Caribbean Sound Archive — Global Riddim Index",
+      },
+      { status: 500 }
+    );
+  }
 
   // Fetch grounding context from dancehall sources (fails silently → LLM-only fallback)
   const sourceContext = await fetchSourceContext(query);
@@ -104,33 +131,60 @@ export async function POST(req: NextRequest) {
     ? `ARCHIVAL SOURCE EXCERPTS (use these specific details in your answer):\n\n${sourceContext}\n\n---\nUSER QUERY: ${query}`
     : query;
 
-  try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${GROQ_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [
-          { role: "system", content: AGENT },
-          { role: "user", content: userMessage },
-        ],
-        max_tokens: 350,
-        temperature: 0.7,
-      }),
-    });
+  let lastError = "";
 
-    const data = await res.json();
-    const answer = data.choices?.[0]?.message?.content || "The Archive has no record matching this inquiry.";
+  for (const model of MODELS) {
+    try {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${GROQ_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: AGENT },
+            { role: "user", content: userMessage },
+          ],
+          max_tokens: 350,
+          temperature: 0.7,
+        }),
+        signal: AbortSignal.timeout(20_000),
+      });
 
-    return NextResponse.json({
-      query,
-      answer,
-      source: "Caribbean Sound Archive — Global Riddim Index",
-    });
-  } catch {
-    return NextResponse.json({ answer: "The Archive is temporarily unavailable. Consult the pressing logs directly." });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const msg =
+          data?.error?.message ||
+          data?.error?.type ||
+          `HTTP ${res.status} ${res.statusText}`;
+        lastError = `${model}: ${msg}`;
+        // Auth errors will not be fixed by trying another model — stop here.
+        if (res.status === 401 || res.status === 403) break;
+        continue;
+      }
+
+      const answer = String(data?.choices?.[0]?.message?.content ?? "").trim();
+      if (answer) {
+        return NextResponse.json({
+          query,
+          answer,
+          source: "Caribbean Sound Archive — Global Riddim Index",
+          model,
+        });
+      }
+      lastError = `${model}: 200 OK but empty content`;
+    } catch (e: any) {
+      lastError = `${model}: ${e?.message || "network error"}`;
+    }
   }
+
+  return NextResponse.json({
+    query,
+    answer: "The Archive is temporarily unavailable. Consult the pressing logs directly.",
+    source: "Caribbean Sound Archive — Global Riddim Index",
+    error: lastError || "Unknown Groq failure",
+  });
 }
