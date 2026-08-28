@@ -93,12 +93,13 @@ async function fetchSourceContext(query: string): Promise<string> {
 }
 
 // Try primary model first; fall back if Groq reports the model is gone.
-// NOTE (2026-08-28): llama-3.3-70b-versatile and llama-3.1-8b-instant are now
-// Enterprise-only on Groq, so hobby keys get "model does not exist or you do
-// not have access". Current public IDs below.
+// NOTE (2026-08-28): the old llama-3.x and llama-4 ids now return
+// "does not exist or you do not have access". Current public Groq chat
+// models per console.groq.com/docs/models are below.
 const MODELS = [
-  "meta-llama/llama-4-maverick-17b-128e-instruct",
-  "meta-llama/llama-4-scout-17b-16e-instruct",
+  "openai/gpt-oss-120b",
+  "qwen/qwen3.8-27b",
+  "openai/gpt-oss-20b",
 ];
 
 export async function POST(req: NextRequest) {
