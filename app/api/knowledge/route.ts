@@ -24,8 +24,14 @@ What you know:
 Rules:
 - If asked about something outside Caribbean music culture, redirect gracefully
 - Keep answers concise (2-4 sentences) but rich with detail
+- NEVER invent names, dates, winners, venues, or facts. This is critical. If you are not
+  certain of a specific fact (for example, who won a particular clash), say the archival
+  records are inconclusive or that the pressing logs do not conclusively record it —
+  do NOT guess or fabricate.
 - Never speculate — if archival records are incomplete, say so with authority
-- When provided with archival source excerpts below, use their specific details — names, dates, what actually happened. Do not sanitize or generalize.`;
+- When provided with archival source excerpts below, use their specific details — names, dates, what actually happened. Do not sanitize or generalize.
+- If the provided excerpts do not contain the answer, rely only on well-established facts
+  you are highly confident about. When unsure, prefer saying so over filling the gap.`;
 
 
 // ── Grounding: fetch dancehall blog excerpts for context ──────────
@@ -97,8 +103,8 @@ async function fetchSourceContext(query: string): Promise<string> {
 // "does not exist or you do not have access". Current public Groq chat
 // models per console.groq.com/docs/models are below.
 const MODELS = [
-  "openai/gpt-oss-120b",
   "qwen/qwen3.8-27b",
+  "openai/gpt-oss-120b",
   "openai/gpt-oss-20b",
 ];
 
