@@ -93,7 +93,13 @@ async function fetchSourceContext(query: string): Promise<string> {
 }
 
 // Try primary model first; fall back if Groq reports the model is gone.
-const MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
+// NOTE (2026-08-28): llama-3.3-70b-versatile and llama-3.1-8b-instant are now
+// Enterprise-only on Groq, so hobby keys get "model does not exist or you do
+// not have access". Current public IDs below.
+const MODELS = [
+  "meta-llama/llama-4-maverick-17b-128e-instruct",
+  "meta-llama/llama-4-scout-17b-16e-instruct",
+];
 
 export async function POST(req: NextRequest) {
   let body: any = {};
@@ -131,7 +137,7 @@ export async function POST(req: NextRequest) {
     ? `ARCHIVAL SOURCE EXCERPTS (use these specific details in your answer):\n\n${sourceContext}\n\n---\nUSER QUERY: ${query}`
     : query;
 
-  let lastError = "";
+  const errors: string[] = [];
 
   for (const model of MODELS) {
     try {
@@ -160,7 +166,7 @@ export async function POST(req: NextRequest) {
           data?.error?.message ||
           data?.error?.type ||
           `HTTP ${res.status} ${res.statusText}`;
-        lastError = `${model}: ${msg}`;
+        errors.push(`${model}: ${msg}`);
         // Auth errors will not be fixed by trying another model — stop here.
         if (res.status === 401 || res.status === 403) break;
         continue;
@@ -175,9 +181,9 @@ export async function POST(req: NextRequest) {
           model,
         });
       }
-      lastError = `${model}: 200 OK but empty content`;
+      errors.push(`${model}: 200 OK but empty content`);
     } catch (e: any) {
-      lastError = `${model}: ${e?.message || "network error"}`;
+      errors.push(`${model}: ${e?.message || "network error"}`);
     }
   }
 
@@ -185,6 +191,6 @@ export async function POST(req: NextRequest) {
     query,
     answer: "The Archive is temporarily unavailable. Consult the pressing logs directly.",
     source: "Caribbean Sound Archive — Global Riddim Index",
-    error: lastError || "Unknown Groq failure",
+    error: errors.join(" | ") || "Unknown Groq failure",
   });
 }
