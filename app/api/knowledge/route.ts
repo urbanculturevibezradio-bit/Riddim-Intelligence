@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
 
 const GROQ_KEY = process.env.GROQ_API_KEY || "";
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
@@ -30,71 +32,197 @@ Rules:
   do NOT guess or fabricate.
 - Never speculate — if archival records are incomplete, say so with authority
 - When provided with archival source excerpts below, use their specific details — names, dates, what actually happened. Do not sanitize or generalize.
+- The archival source excerpts are authoritative. When they are provided, prefer their
+  details over your internal memory. If they contradict something you think you know,
+  trust the excerpts.
 - If the provided excerpts do not contain the answer, rely only on well-established facts
   you are highly confident about. When unsure, prefer saying so over filling the gap.`;
 
 
-// ── Grounding: fetch dancehall blog excerpts for context ──────────
+// ── Grounding: fetch real archival context before answering ──────────
 
-async function fetchSourceContext(query: string): Promise<string> {
-  const sources: string[] = [];
+function stripHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&#8217;|&rsquo;/g, "'")
+    .replace(/&#8220;|&#8221;|&ldquo;|&rdquo;/g, '"')
+    .replace(/&#8211;|&ndash;/g, "-")
+    .replace(/&#8230;|&hellip;/g, "…")
+    .replace(/&quot;/g, '"')
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
-  // Source 1: DancehallMag (WordPress search)
+// Strip natural-language question prefixes so search engines get the topic.
+function wikiSearchTerm(query: string): string {
+  return query
+    .replace(/\?+$/, "")
+    .replace(
+      /^(who won|who is|who was|what is|what are|what was|what were|history of|origin of|when did|when was|where is|where was|how did|how is|tell me about|explain|describe)\s+/i,
+      ""
+    )
+    .trim();
+}
+
+async function fetchJSON(url: string, timeoutMs: number): Promise<any> {
+  const res = await fetch(url, {
+    headers: { "User-Agent": UA },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// Local Global Riddim Index (public/*.json) — canonical riddim catalog
+function localRiddimContext(query: string): string {
   try {
-    const url = `https://www.dancehallmag.com/?s=${encodeURIComponent(query)}`;
-    const res = await fetch(url, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(8000) });
-    const html = await res.text();
+    const q = query.toLowerCase().replace(/\s+riddim\s*$/i, "").trim();
+    if (!q) return "";
+    const publicDir = path.join(process.cwd(), "public");
+    const entries: { name: string; bpm?: number | null; key?: string | null; tracks: string[] }[] = [];
 
-    // Extract article cards: title + excerpt
-    const cards = [...html.matchAll(/<article[^>]*>([\s\S]*?)<\/article>/gi)];
-    const snippets: string[] = [];
-
-    for (const card of cards.slice(0, 3)) {
-      const body = card[1];
-      const title = (body.match(/<h[23][^>]*class="[^"]*entry-title[^"]*"[^>]*>[\s\S]*?<a[^>]*>([^<]+)<\/a>/i) || [])[1]
-        || (body.match(/<h[23][^>]*>[\s\S]*?<a[^>]*>([^<]+)<\/a>/i) || [])[1]
-        || "";
-      const excerpt = (body.match(/<div[^>]*class="[^"]*entry-content[^"]*"[^>]*>([\s\S]*?)<\/div>/i) || [])[1]
-        || (body.match(/<p[^>]*>([\s\S]*?)<\/p>/i) || [])[1]
-        || "";
-
-      const clean = (t: string) => t.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&#?\w+;/g, "").replace(/\s+/g, " ").trim();
-      const t = clean(title);
-      const e = clean(excerpt);
-      if (t) snippets.push(`${t}${e ? ": " + e : ""}`);
-    }
-
-    if (snippets.length) {
-      sources.push(`[DancehallMag excerpts]\n${snippets.map((s) => `- ${s}`).join("\n")}`);
-    }
-  } catch { /* silent — fallback to LLM-only */ }
-
-  // Source 2: Reggaeville search
-  try {
-    const url = `https://www.reggaeville.com/search/?q=${encodeURIComponent(query)}`;
-    const res = await fetch(url, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(8000) });
-    const html = await res.text();
-
-    const items = [...html.matchAll(/<div[^>]*class="[^"]*search-result[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/gi)];
-    const snippets: string[] = [];
-
-    for (const item of items.slice(0, 3)) {
-      const body = item[1];
-      const title = (body.match(/<a[^>]*class="[^"]*title[^"]*"[^>]*>([^<]+)<\/a>/i) || [])[1]
-        || (body.match(/<a[^>]*>([^<]+)<\/a>/i) || [])[1]
-        || "";
-      const text = body.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&#?\w+;/g, "").replace(/\s+/g, " ").trim();
-      const t = title.trim();
-      if (t && text.length > 20) {
-        snippets.push(`${t}: ${text.slice(0, 300)}`);
+    for (const file of ["riddims_enriched.json", "riddims.json", "riddims_vdj_bpm.json"]) {
+      const p = path.join(publicDir, file);
+      if (!fs.existsSync(p)) continue;
+      const data = JSON.parse(fs.readFileSync(p, "utf8"));
+      const list = Array.isArray(data) ? data : data?.riddims;
+      if (!Array.isArray(list)) continue;
+      for (const r of list) {
+        const name = String(r?.name ?? "").trim();
+        if (!name) continue;
+        const n = name.toLowerCase().replace(/\s+riddim\s*$/i, "").trim();
+        if (!n) continue;
+        const words = q.split(/\s+/).filter(Boolean);
+        const match =
+          n === q ||
+          n.includes(q) ||
+          q.includes(n) ||
+          (words.length > 0 && words.every((w) => n.includes(w)));
+        if (!match) continue;
+        const tracks = Array.isArray(r.tracks)
+          ? r.tracks
+              .map((t: any) =>
+                (typeof t === "string" ? t : `${t?.artist ?? ""} - ${t?.title ?? ""}`).trim()
+              )
+              .filter(Boolean)
+          : [];
+        entries.push({ name, bpm: r.bpm ?? null, key: r.key ?? null, tracks });
       }
     }
 
-    if (snippets.length) {
-      sources.push(`[Reggaeville excerpts]\n${snippets.map((s) => `- ${s}`).join("\n")}`);
-    }
-  } catch { /* silent */ }
+    const seen = new Set<string>();
+    const uniq = entries
+      .filter((e) => !seen.has(e.name.toLowerCase()) && seen.add(e.name.toLowerCase()))
+      .slice(0, 5);
+    if (!uniq.length) return "";
 
+    return `[Global Riddim Index — local catalog]\n${uniq
+      .map((e) => {
+        const meta = [e.bpm ? `${e.bpm} BPM` : "", e.key ? `Key ${e.key}` : ""]
+          .filter(Boolean)
+          .join(" · ");
+        const trackLine = e.tracks.length
+          ? `\n  Cataloged pressings: ${e.tracks.slice(0, 10).join(", ")}`
+          : "";
+        return `- ${e.name}${meta ? ` (${meta})` : ""}${trackLine}`;
+      })
+      .join("\n")}`;
+  } catch {
+    return "";
+  }
+}
+
+async function fetchSourceContext(query: string): Promise<string> {
+  const tasks: Promise<string>[] = [];
+
+  // 1) Local Global Riddim Index (instant, no network)
+  tasks.push(Promise.resolve(localRiddimContext(query)));
+
+  // 2) DancehallMag WordPress REST API — search, then pull 2 full articles
+  tasks.push(
+    (async () => {
+      try {
+        const items = await fetchJSON(
+          `https://www.dancehallmag.com/wp-json/wp/v2/search?search=${encodeURIComponent(query)}&per_page=3&_fields=id,title,url`,
+          7000
+        );
+        const posts: string[] = [];
+        for (const item of (Array.isArray(items) ? items : []).slice(0, 2)) {
+          if (!item?.id) continue;
+          try {
+            const post = await fetchJSON(
+              `https://www.dancehallmag.com/wp-json/wp/v2/posts/${item.id}?_fields=title,content`,
+              7000
+            );
+            const title = stripHtml(post?.title?.rendered ?? "");
+            const text = stripHtml(post?.content?.rendered ?? "");
+            if (text.length > 40) {
+              posts.push(`[Archive document: ${title || "Untitled"}]\n${text.slice(0, 1500)}`);
+            }
+          } catch {}
+        }
+        return posts.length ? posts.join("\n\n") : "";
+      } catch {
+        return "";
+      }
+    })()
+  );
+
+  // 3) Wikipedia API — general fact grounding (normalized + dancehall-scoped)
+  tasks.push(
+    (async () => {
+      try {
+        const term = wikiSearchTerm(query);
+        const searchTerm = /dancehall|reggae|riddim|ska|soca|sound system|dub|clash|dutty/i.test(term)
+          ? term
+          : `${term} dancehall`;
+        const data = await fetchJSON(
+          `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchTerm)}&format=json&srlimit=2&origin=*`,
+          7000
+        );
+        const hits = data?.query?.search;
+        const snippets: string[] = [];
+        for (const h of (Array.isArray(hits) ? hits : []).slice(0, 2)) {
+          const title = String(h?.title ?? "").trim();
+          const snip = stripHtml(String(h?.snippet ?? ""));
+          if (title && snip) snippets.push(`- ${title}: ${snip}`);
+        }
+
+        // Pull the fuller intro of the top hit for real grounding text
+        const top: any = Array.isArray(hits) ? hits[0] : null;
+        if (top?.title) {
+          try {
+            const ex = await fetchJSON(
+              `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&format=json&titles=${encodeURIComponent(top.title)}&origin=*`,
+              7000
+            );
+            const pages: any = ex?.query?.pages ?? {};
+            const first: any = Object.values(pages)[0];
+            const extract = stripHtml(String(first?.extract ?? ""));
+            if (extract.length > 40) {
+              snippets.push(`[Archival reference: ${top.title}]\n${extract.slice(0, 900)}`);
+            }
+          } catch {}
+        }
+
+        return snippets.length ? snippets.join("\n") : "";
+      } catch {
+        return "";
+      }
+    })()
+  );
+
+  const settled = await Promise.allSettled(tasks);
+  const sources = settled
+    .filter(
+      (r): r is PromiseFulfilledResult<string> =>
+        r.status === "fulfilled" && Boolean(r.value)
+    )
+    .map((r) => r.value);
   return sources.join("\n\n");
 }
 
