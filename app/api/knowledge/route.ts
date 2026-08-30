@@ -15,29 +15,18 @@ Tone:
 - Frame all knowledge as coming from "The Global Riddim Index" or "Caribbean Sound Archive"
 - Use phrases like: "According to archival records...", "The pressing logs indicate...", "Oral history preserved in the Archive documents..."
 
-What you know:
-- Dancehall and reggae sound clashes (Sting, World Clash, Fully Loaded, etc.)
-- Historical venues and events (Passa Passa, Dub Club, Stone Love, etc.)
-- Riddim histories — who produced what, when, and cultural impact
-- Artist biographies and career milestones
-- Caribbean music terminology and slang in context
-- Festival histories (Sumfest, Rebel Salute, Carnival, etc.)
-
-Rules:
-- If asked about something outside Caribbean music culture, redirect gracefully
-- Keep answers concise (2-4 sentences) but rich with detail
-- NEVER invent names, dates, winners, venues, or facts. This is critical. If you are not
-  certain of a specific fact (for example, who won a particular clash), say the archival
-  records are inconclusive or that the pressing logs do not conclusively record it —
-  do NOT guess or fabricate.
-- Never speculate — if archival records are incomplete, say so with authority
-- When provided with archival source excerpts below, use their specific details — names, dates, what actually happened. Do not sanitize or generalize.
-- The archival source excerpts are authoritative. When they are provided, prefer their
-  details over your internal memory. If they contradict something you think you know,
-  trust the excerpts.
-- If the provided excerpts do not contain the answer, rely only on well-established facts
-  you are highly confident about. When unsure, prefer saying so over filling the gap.`;
-
+RULES (in order of importance):
+1. ANSWER FROM THE EXCERPTS ONLY. When archival source excerpts are provided below, they are
+   your sole factual basis. Use their specific details — names, dates, what actually happened.
+   Do not add outside knowledge, and do not invent details that are not in the excerpts.
+2. If the excerpts do not contain an answer to the user's query, say the archival records are
+   inconclusive and that the pressing logs do not conclusively record it. Never guess.
+3. If NO excerpts were provided at all, you may answer only from basic, uncontroversial,
+   widely-known facts. Any specific claim (dates, winners, venues, producers) you are not
+   completely certain of must be replaced with a statement that the records are inconclusive.
+4. Never fabricate names, dates, winners, venues, or quotes. If the user asks about something
+   outside Caribbean music culture, redirect gracefully.
+5. Keep answers concise (2-4 sentences) but rich with the details the excerpts actually contain.`;
 
 // ── Grounding: fetch real archival context before answering ──────────
 
@@ -136,11 +125,21 @@ function localRiddimContext(query: string): string {
   }
 }
 
-async function fetchSourceContext(query: string): Promise<string> {
-  const tasks: Promise<string>[] = [];
+interface GroundingResult {
+  context: string;
+  labels: string[];
+}
+
+async function fetchSourceContext(query: string): Promise<GroundingResult> {
+  const tasks: Promise<GroundingResult>[] = [];
 
   // 1) Local Global Riddim Index (instant, no network)
-  tasks.push(Promise.resolve(localRiddimContext(query)));
+  tasks.push(
+    (async () => {
+      const ctx = localRiddimContext(query);
+      return { context: ctx, labels: ctx ? ["Global Riddim Index (local)"] : [] };
+    })()
+  );
 
   // 2) DancehallMag WordPress REST API — search, then pull 2 full articles
   tasks.push(
@@ -151,6 +150,7 @@ async function fetchSourceContext(query: string): Promise<string> {
           7000
         );
         const posts: string[] = [];
+        const labels: string[] = [];
         for (const item of (Array.isArray(items) ? items : []).slice(0, 2)) {
           if (!item?.id) continue;
           try {
@@ -161,18 +161,19 @@ async function fetchSourceContext(query: string): Promise<string> {
             const title = stripHtml(post?.title?.rendered ?? "");
             const text = stripHtml(post?.content?.rendered ?? "");
             if (text.length > 40) {
-              posts.push(`[Archive document: ${title || "Untitled"}]\n${text.slice(0, 1500)}`);
+              posts.push(`[Archive document: ${title || "Untitled"}]\n${text.slice(0, 1200)}`);
+              labels.push(title || "Archive document");
             }
           } catch {}
         }
-        return posts.length ? posts.join("\n\n") : "";
+        return { context: posts.join("\n\n"), labels };
       } catch {
-        return "";
+        return { context: "", labels: [] };
       }
     })()
   );
 
-  // 3) Wikipedia API — general fact grounding (normalized + dancehall-scoped)
+  // 3) Wikipedia API — single best intro extract only (no noisy search snippets)
   tasks.push(
     (async () => {
       try {
@@ -181,49 +182,43 @@ async function fetchSourceContext(query: string): Promise<string> {
           ? term
           : `${term} dancehall`;
         const data = await fetchJSON(
-          `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchTerm)}&format=json&srlimit=2&origin=*`,
+          `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchTerm)}&format=json&srlimit=1&origin=*`,
           7000
         );
-        const hits = data?.query?.search;
-        const snippets: string[] = [];
-        for (const h of (Array.isArray(hits) ? hits : []).slice(0, 2)) {
-          const title = String(h?.title ?? "").trim();
-          const snip = stripHtml(String(h?.snippet ?? ""));
-          if (title && snip) snippets.push(`- ${title}: ${snip}`);
-        }
+        const top: any = data?.query?.search?.[0];
+        if (!top?.title) return { context: "", labels: [] };
 
-        // Pull the fuller intro of the top hit for real grounding text
-        const top: any = Array.isArray(hits) ? hits[0] : null;
-        if (top?.title) {
-          try {
-            const ex = await fetchJSON(
-              `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&format=json&titles=${encodeURIComponent(top.title)}&origin=*`,
-              7000
-            );
-            const pages: any = ex?.query?.pages ?? {};
-            const first: any = Object.values(pages)[0];
-            const extract = stripHtml(String(first?.extract ?? ""));
-            if (extract.length > 40) {
-              snippets.push(`[Archival reference: ${top.title}]\n${extract.slice(0, 900)}`);
-            }
-          } catch {}
-        }
+        const ex = await fetchJSON(
+          `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&format=json&titles=${encodeURIComponent(top.title)}&origin=*`,
+          7000
+        );
+        const pages: any = ex?.query?.pages ?? {};
+        const first: any = Object.values(pages)[0];
+        const extract = stripHtml(String(first?.extract ?? ""));
+        if (extract.length < 40) return { context: "", labels: [] };
 
-        return snippets.length ? snippets.join("\n") : "";
+        return {
+          context: `[Archival reference: ${top.title}]\n${extract.slice(0, 900)}`,
+          labels: [top.title],
+        };
       } catch {
-        return "";
+        return { context: "", labels: [] };
       }
     })()
   );
 
   const settled = await Promise.allSettled(tasks);
-  const sources = settled
+  const results = settled
     .filter(
-      (r): r is PromiseFulfilledResult<string> =>
-        r.status === "fulfilled" && Boolean(r.value)
+      (r): r is PromiseFulfilledResult<GroundingResult> =>
+        r.status === "fulfilled" && Boolean(r.value?.context)
     )
     .map((r) => r.value);
-  return sources.join("\n\n");
+
+  return {
+    context: results.map((r) => r.context).join("\n\n"),
+    labels: results.flatMap((r) => r.labels),
+  };
 }
 
 // Try primary model first; fall back if Groq reports the model is gone.
@@ -231,10 +226,40 @@ async function fetchSourceContext(query: string): Promise<string> {
 // "does not exist or you do not have access". Current public Groq chat
 // models per console.groq.com/docs/models are below.
 const MODELS = [
-  "qwen/qwen3.8-27b",
   "openai/gpt-oss-120b",
   "openai/gpt-oss-20b",
+  "qwen/qwen3.8-27b",
 ];
+
+async function callGroq(model: string, userMessage: string, attempt: number): Promise<any> {
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${GROQ_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: AGENT },
+        { role: "user", content: userMessage },
+      ],
+      max_tokens: 300,
+      temperature: 0.4,
+    }),
+    signal: AbortSignal.timeout(20_000),
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  // Retry once on rate limit / server overload
+  if (res.status === 429 && attempt < 2) {
+    await new Promise((r) => setTimeout(r, 1200));
+    return callGroq(model, userMessage, attempt + 1);
+  }
+
+  return { ok: res.ok, status: res.status, data };
+}
 
 export async function POST(req: NextRequest) {
   let body: any = {};
@@ -265,45 +290,27 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Fetch grounding context from dancehall sources (fails silently → LLM-only fallback)
-  const sourceContext = await fetchSourceContext(query);
+  // Fetch grounding context from real sources (fails silently → LLM-only fallback)
+  const grounding = await fetchSourceContext(query);
 
-  const userMessage = sourceContext
-    ? `ARCHIVAL SOURCE EXCERPTS (use these specific details in your answer):\n\n${sourceContext}\n\n---\nUSER QUERY: ${query}`
+  const userMessage = grounding.context
+    ? `ARCHIVAL SOURCE EXCERPTS (answer strictly from these):\n\n${grounding.context}\n\n---\nUSER QUERY: ${query}`
     : query;
 
   const errors: string[] = [];
 
   for (const model of MODELS) {
     try {
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${GROQ_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: AGENT },
-            { role: "user", content: userMessage },
-          ],
-          max_tokens: 350,
-          temperature: 0.7,
-        }),
-        signal: AbortSignal.timeout(20_000),
-      });
+      const { ok, status, data } = await callGroq(model, userMessage, 1);
 
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
+      if (!ok) {
         const msg =
           data?.error?.message ||
           data?.error?.type ||
-          `HTTP ${res.status} ${res.statusText}`;
+          `HTTP ${status}`;
         errors.push(`${model}: ${msg}`);
         // Auth errors will not be fixed by trying another model — stop here.
-        if (res.status === 401 || res.status === 403) break;
+        if (status === 401 || status === 403) break;
         continue;
       }
 
@@ -314,6 +321,7 @@ export async function POST(req: NextRequest) {
           answer,
           source: "Caribbean Sound Archive — Global Riddim Index",
           model,
+          grounding: grounding.labels,
         });
       }
       errors.push(`${model}: 200 OK but empty content`);
@@ -327,5 +335,6 @@ export async function POST(req: NextRequest) {
     answer: "The Archive is temporarily unavailable. Consult the pressing logs directly.",
     source: "Caribbean Sound Archive — Global Riddim Index",
     error: errors.join(" | ") || "Unknown Groq failure",
+    grounding: grounding.labels,
   });
 }
