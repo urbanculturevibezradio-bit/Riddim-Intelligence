@@ -187,7 +187,7 @@ Scrapes 5 sources in parallel: YouTube HTML, RiddimGuide, RiddimsWorld, Riddim-I
 
 ### POST /api/knowledge
 Body: `{ "query": "..." }`  
-Grounds queries against Archive sources only (local Global Riddim Index + DancehallMag), then answers via Groq. NO Wikipedia. NO Anthropic. Requires `GROQ_API_KEY` in `.env.local`.
+Archive Ask Bot. Grounds queries against Archive sources only: entity store (`lib/entities.mts`) + local Global Riddim Index + Riddims World + Regime Radio + MongoDB `artists`. Then answers via Groq. NO Wikipedia. NO Anthropic. Requires `GROQ_API_KEY` in `.env.local`.
 
 ---
 
@@ -201,6 +201,28 @@ MONGODB_URI=             # Required for MongoDB (lib/mongodb.ts)
 # ❌ ANTHROPIC_API_KEY — DO NOT USE. NOTHING in this project may call Anthropic/Claude.
 #    No dancehall info, no functions, no grounding, no chat. JOK — NEVER.
 ```
+
+---
+
+## MONGODB ARCHIVE SEED
+
+Seeds the `artists` collection from the single source of truth `lib/entities.mts`.
+
+```bash
+npm run seed:archive
+```
+
+- Database: `riddim-intelligence`
+- Collection: `artists`
+- Requires a **valid** `MONGODB_URI` in `.env.local` (or the environment).
+- ⚠️ STATUS 2026-09-01: the local credential files in `Documents/`
+  (`mongodb+srvurbanculturevibezradio_d.txt` + `Mongo strig conn pw.txt`)
+  are STALE — MongoDB Atlas rejects them with `bad auth : authentication failed`.
+  Get the current `MONGODB_URI` before running the seed.
+- The Archive Ask Bot does NOT depend on this seed: the curated entity store
+  ships inside `lib/entities.mts`, so major artists answer correctly even with
+  MongoDB down. The seed is enrichment only.
+- Archive data only. NO Wikipedia. NO Anthropic.
 
 ---
 
