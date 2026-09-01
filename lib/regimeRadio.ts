@@ -45,7 +45,10 @@ export async function searchRegimeRadio(
         signal: AbortSignal.timeout(10_000),
       }
     );
-    if (!res.ok) return [];
+    if (!res.ok) {
+      console.error(`regimeRadio search HTTP ${res.status} for "${q}"`);
+      return [];
+    }
 
     const data = await res.json();
     if (!Array.isArray(data)) return [];
@@ -57,7 +60,8 @@ export async function searchRegimeRadio(
         title: stripHtml(String(x.title)),
         url: x.url ?? "",
       }));
-  } catch {
+  } catch (e: any) {
+    console.error("regimeRadio search error:", e?.message || e);
     return [];
   }
 }
@@ -72,10 +76,14 @@ export async function fetchRegimeRadioArticle(id: number): Promise<string> {
         signal: AbortSignal.timeout(10_000),
       }
     );
-    if (!res.ok) return "";
+    if (!res.ok) {
+      console.error(`regimeRadio article HTTP ${res.status} for post ${id}`);
+      return "";
+    }
     const post = await res.json();
     return stripHtml(String(post?.content?.rendered ?? ""));
-  } catch {
+  } catch (e: any) {
+    console.error("regimeRadio article error:", e?.message || e);
     return "";
   }
 }
