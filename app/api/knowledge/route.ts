@@ -190,7 +190,9 @@ export async function POST(req: NextRequest) {
   // ── Archive-only grounding: entity store + local riddim index + Riddims World + MongoDB ──
   const topic = bareTopic(query);
   const entity = buildEntityContext(query, 6);
-  const local = localRiddimContext(query);
+  // Local riddim index needs the cleaned topic ("tempo"), not the raw
+  // question ("what is the tempo riddim"), or word matching never hits.
+  const local = localRiddimContext(topic);
   const mongo = await mongoArchiveContext(topic);
   // Riddims World is only useful for riddim/topic queries — skip it when a
   // canonical artist/entity already resolved.
