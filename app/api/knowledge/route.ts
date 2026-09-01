@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { buildEntityContext, bareTopic } from "@/lib/entities.mts";
+import { fetchRiddimsWorld } from "@/lib/riddimsWorld";
+
+// ⛔ HARD RULES (B.md): NO ANTHROPIC. NO WIKIPEDIA. Archive data only.
+// LLM provider: Groq only.
 
 const GROQ_KEY = process.env.GROQ_API_KEY || "";
-const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
 
-const AGENT = `You are the Cultural Intelligence Officer of Riddim Intelligence — the Global Master Audio Archive.
+const AGENT = `You are the Cultural Intelligence Officer of the Caribbean Sound Archive — part of Riddim Intelligence, the Global Master Audio Archive.
 
-Your domain: Caribbean music culture, history, and events.
+Your domain: Caribbean music culture, history, and events — dancehall, reggae, artists, deejays, producers, labels, sound systems, clashes, riddims, and eras.
 
 Tone:
 - Formal archival authority, like a senior curator at a national sound archive
@@ -16,57 +20,13 @@ Tone:
 - Use phrases like: "According to archival records...", "The pressing logs indicate...", "Oral history preserved in the Archive documents..."
 
 RULES (in order of importance):
-1. ANSWER FROM THE EXCERPTS ONLY. When archival source excerpts are provided below, they are
-   your sole factual basis. Use their specific details — names, dates, what actually happened.
-   Do not add outside knowledge, and do not invent details that are not in the excerpts.
-2. If the excerpts do not contain an answer to the user's query, say the archival records are
-   inconclusive and that the pressing logs do not conclusively record it. Never guess.
-3. If NO excerpts were provided at all, you may answer only from basic, uncontroversial,
-   widely-known facts. Any specific claim (dates, winners, venues, producers) you are not
-   completely certain of must be replaced with a statement that the records are inconclusive.
-4. Never fabricate names, dates, winners, venues, or quotes. If the user asks about something
-   outside Caribbean music culture, redirect gracefully.
-5. Keep answers concise (2-4 sentences) but rich with the details the excerpts actually contain.`;
+1. ANSWER FROM THE ARCHIVE RECORDS PROVIDED BELOW ONLY. They are your sole factual basis. Use their specific details — names, dates, eras, recordings, and history. Do not add outside knowledge and do not invent details that are not in the records.
+2. If the records provided do not contain an answer to the user's query, say exactly that the archival records are inconclusive and that the Caribbean Sound Archive does not yet contain enough source data to answer. Never guess.
+3. If NO records were provided at all, do not invent facts. State that the Archive does not contain enough source data for this inquiry, and invite the user to ask about riddims, artists, producers, labels, sound systems, clashes, or eras that the Archive holds.
+4. Never fabricate names, dates, winners, venues, or quotes. If the user asks about something outside Caribbean music culture, redirect gracefully.
+5. Keep answers concise (2-5 sentences) but rich with the details the records actually contain.`;
 
-// ── Grounding: fetch real archival context before answering ──────────
-
-function stripHtml(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&#8217;|&rsquo;/g, "'")
-    .replace(/&#8220;|&#8221;|&ldquo;|&rdquo;/g, '"')
-    .replace(/&#8211;|&ndash;/g, "-")
-    .replace(/&#8230;|&hellip;/g, "…")
-    .replace(/&quot;/g, '"')
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-// Strip natural-language question prefixes so search engines get the topic.
-function wikiSearchTerm(query: string): string {
-  return query
-    .replace(/\?+$/, "")
-    .replace(
-      /^(who won|who is|who was|what is|what are|what was|what were|history of|origin of|when did|when was|where is|where was|how did|how is|tell me about|explain|describe)\s+/i,
-      ""
-    )
-    .trim();
-}
-
-async function fetchJSON(url: string, timeoutMs: number): Promise<any> {
-  const res = await fetch(url, {
-    headers: { "User-Agent": UA },
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
-
-// Local Global Riddim Index (public/*.json) — canonical riddim catalog
+// ── Local Global Riddim Index (public/*.json) — canonical riddim catalog ──
 function localRiddimContext(query: string): string {
   try {
     const q = query.toLowerCase().replace(/\s+riddim\s*$/i, "").trim();
@@ -125,106 +85,43 @@ function localRiddimContext(query: string): string {
   }
 }
 
-interface GroundingResult {
-  context: string;
-  labels: string[];
+// ── MongoDB archive records (optional enrichment — archive-only) ─────────
+async function mongoArchiveContext(topic: string): Promise<{ context: string; labels: string[] }> {
+  if (!process.env.MONGODB_URI || !topic) return { context: "", labels: [] };
+  try {
+    const { searchArchive } = await import("@/lib/archiveDb");
+    const docs = await searchArchive(topic);
+    if (!docs.length) return { context: "", labels: [] };
+
+    const context = `[Caribbean Sound Archive — MongoDB records]\n${docs
+      .map((d: any) => {
+        const head = [d.name, d.realName ? `real name: ${d.realName}` : "", d.era ?? "", d.role ?? ""]
+          .filter(Boolean)
+          .join(" · ");
+        return `- ${head}\n  ${d.bio ?? ""}`;
+      })
+      .join("\n")}`;
+
+    return { context, labels: docs.map((d: any) => d.name ?? "Archive record") };
+  } catch {
+    return { context: "", labels: [] };
+  }
 }
 
-async function fetchSourceContext(query: string): Promise<GroundingResult> {
-  const tasks: Promise<GroundingResult>[] = [];
-
-  // 1) Local Global Riddim Index (instant, no network)
-  tasks.push(
-    (async () => {
-      const ctx = localRiddimContext(query);
-      return { context: ctx, labels: ctx ? ["Global Riddim Index (local)"] : [] };
-    })()
-  );
-
-  // 2) DancehallMag WordPress REST API — search, then pull 2 full articles
-  tasks.push(
-    (async () => {
-      try {
-        const items = await fetchJSON(
-          `https://www.dancehallmag.com/wp-json/wp/v2/search?search=${encodeURIComponent(query)}&per_page=3&_fields=id,title,url`,
-          7000
-        );
-        const posts: string[] = [];
-        const labels: string[] = [];
-        for (const item of (Array.isArray(items) ? items : []).slice(0, 2)) {
-          if (!item?.id) continue;
-          try {
-            const post = await fetchJSON(
-              `https://www.dancehallmag.com/wp-json/wp/v2/posts/${item.id}?_fields=title,content`,
-              7000
-            );
-            const title = stripHtml(post?.title?.rendered ?? "");
-            const text = stripHtml(post?.content?.rendered ?? "");
-            if (text.length > 40) {
-              posts.push(`[Archive document: ${title || "Untitled"}]\n${text.slice(0, 1200)}`);
-              labels.push(title || "Archive document");
-            }
-          } catch {}
-        }
-        return { context: posts.join("\n\n"), labels };
-      } catch {
-        return { context: "", labels: [] };
-      }
-    })()
-  );
-
-  // 3) Wikipedia API — single best intro extract only (no noisy search snippets)
-  tasks.push(
-    (async () => {
-      try {
-        const term = wikiSearchTerm(query);
-        const searchTerm = /dancehall|reggae|riddim|ska|soca|sound system|dub|clash|dutty/i.test(term)
-          ? term
-          : `${term} dancehall`;
-        const data = await fetchJSON(
-          `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchTerm)}&format=json&srlimit=1&origin=*`,
-          7000
-        );
-        const top: any = data?.query?.search?.[0];
-        if (!top?.title) return { context: "", labels: [] };
-
-        const ex = await fetchJSON(
-          `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&format=json&titles=${encodeURIComponent(top.title)}&origin=*`,
-          7000
-        );
-        const pages: any = ex?.query?.pages ?? {};
-        const first: any = Object.values(pages)[0];
-        const extract = stripHtml(String(first?.extract ?? ""));
-        if (extract.length < 40) return { context: "", labels: [] };
-
-        return {
-          context: `[Archival reference: ${top.title}]\n${extract.slice(0, 900)}`,
-          labels: [top.title],
-        };
-      } catch {
-        return { context: "", labels: [] };
-      }
-    })()
-  );
-
-  const settled = await Promise.allSettled(tasks);
-  const results = settled
-    .filter(
-      (r): r is PromiseFulfilledResult<GroundingResult> =>
-        r.status === "fulfilled" && Boolean(r.value?.context)
-    )
-    .map((r) => r.value);
-
+// ── Riddims World — external riddim catalog (allowed archive source) ─────
+async function riddimsWorldContext(topic: string): Promise<{ context: string; label: string }> {
+  const term = topic.toLowerCase().replace(/\s+riddim\s*$/i, "").trim();
+  if (!term) return { context: "", label: "" };
+  const entries = await fetchRiddimsWorld(term, 5);
+  if (!entries.length) return { context: "", label: "" };
   return {
-    context: results.map((r) => r.context).join("\n\n"),
-    labels: results.flatMap((r) => r.labels),
+    context: `[Riddims World — archive catalog]\n${entries.map((e) => `- ${e.name}`).join("\n")}`,
+    label: "Riddims World",
   };
 }
 
-// Try primary model first; fall back if Groq reports the model is gone.
-// NOTE (2026-08-28): the old llama-3.x and llama-4 ids now return
-// "does not exist or you do not have access". Current public Groq chat
-// models per console.groq.com/docs/models are below.
+// ── Groq (the ONLY allowed LLM provider) ─────────────────────────────────
+// Current public Groq chat models per console.groq.com/docs/models.
 const MODELS = [
   "openai/gpt-oss-120b",
   "openai/gpt-oss-20b",
@@ -290,11 +187,27 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Fetch grounding context from real sources (fails silently → LLM-only fallback)
-  const grounding = await fetchSourceContext(query);
+  // ── Archive-only grounding: entity store + local riddim index + Riddims World + MongoDB ──
+  const topic = bareTopic(query);
+  const entity = buildEntityContext(query, 6);
+  const local = localRiddimContext(query);
+  const mongo = await mongoArchiveContext(topic);
+  // Riddims World is only useful for riddim/topic queries — skip it when a
+  // canonical artist/entity already resolved.
+  const rw = entity.resolved
+    ? { context: "", label: "" }
+    : await riddimsWorldContext(topic);
 
-  const userMessage = grounding.context
-    ? `ARCHIVAL SOURCE EXCERPTS (answer strictly from these):\n\n${grounding.context}\n\n---\nUSER QUERY: ${query}`
+  const context = [entity.context, local, rw.context, mongo.context].filter(Boolean).join("\n\n");
+  const labels = [
+    ...entity.labels,
+    ...(local ? ["Global Riddim Index (local)"] : []),
+    ...(rw.context ? [rw.label] : []),
+    ...mongo.labels,
+  ];
+
+  const userMessage = context
+    ? `ARCHIVAL SOURCE EXCERPTS (answer strictly from these):\n\n${context}\n\n---\nUSER QUERY: ${query}`
     : query;
 
   const errors: string[] = [];
@@ -321,7 +234,7 @@ export async function POST(req: NextRequest) {
           answer,
           source: "Caribbean Sound Archive — Global Riddim Index",
           model,
-          grounding: grounding.labels,
+          grounding: labels,
         });
       }
       errors.push(`${model}: 200 OK but empty content`);
@@ -335,6 +248,6 @@ export async function POST(req: NextRequest) {
     answer: "The Archive is temporarily unavailable. Consult the pressing logs directly.",
     source: "Caribbean Sound Archive — Global Riddim Index",
     error: errors.join(" | ") || "Unknown Groq failure",
-    grounding: grounding.labels,
+    grounding: labels,
   });
 }

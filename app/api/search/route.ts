@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { fetchRiddimsWorld } from "@/lib/riddimsWorld";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
 
@@ -86,31 +87,11 @@ async function searchRiddimGuide(query: string) {
 // ── Riddims World ──────────────────────────────────
 
 async function searchRiddimsWorld(query: string) {
-  try {
-    const html = await fetchURL(`https://riddimsworld.com/?s=${encodeURIComponent(query)}`);
-    const links = [...html.matchAll(/<a[^>]*href="(https:\/\/riddimsworld\.com\/[^"]*)"[^>]*>([^<]+)<\/a>/g)];
-    const seen = new Set<string>();
-    const skip = new Set(["latest", "collections", "dancehall", "reggae", "home", "search", "contact", "about", "privacy", "2026 riddims"]);
-
-    return links
-      .map(([, href, text]) => ({ href, text: text.replace(/\s+/g, " ").trim() }))
-      .filter(({ text, href }) => {
-        if (text.length < 8 || skip.has(text.toLowerCase())) return false;
-        if (/\/author\/|\/category\/|\/tag\/|\/page\//.test(href)) return false;
-        if (!text.toLowerCase().includes(query.toLowerCase())) return false;
-        const key = text.slice(0, 60).toLowerCase();
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      })
-      .slice(0, 15)
-      .map(({ href, text }) => {
-        const m = text.match(/[-–—]\s*(.+)/);
-        return { name: text, label: m ? m[1].trim() : "", source: "riddimsworld", url: href, tracks: [] };
-      });
-  } catch {
-    return [];
-  }
+  const entries = await fetchRiddimsWorld(query, 15);
+  return entries.map(({ name, url }) => {
+    const m = name.match(/[-–—]\s*(.+)/);
+    return { name, label: m ? m[1].trim() : "", source: "riddimsworld", url, tracks: [] };
+  });
 }
 
 // ── Riddim-ID ──────────────────────────────────────

@@ -1,9 +1,9 @@
-import clientPromise from './mongodb';
+import getMongoClient from './mongodb';
 import { RiddimEntry } from './riddimSchema';
 
 export async function searchRiddims(query: string) {
   try {
-    const client = await clientPromise;
+    const client = await getMongoClient();
     const db = client.db('riddim-intelligence');
     const collection = db.collection('riddims');
 
@@ -26,7 +26,7 @@ export async function searchRiddims(query: string) {
 
 export async function saveRiddim(riddim: RiddimEntry) {
   try {
-    const client = await clientPromise;
+    const client = await getMongoClient();
     const db = client.db('riddim-intelligence');
     const result = await db.collection('riddims').insertOne(riddim);
     return result;

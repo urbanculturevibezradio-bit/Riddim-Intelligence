@@ -1,23 +1,21 @@
-import { MongoClient } from 'mongodb';
+import { MongoClient } from "mongodb";
 
-const uri = process.env.MONGODB_URI as string;
-
-let client: MongoClient;
-let clientPromise: Promise<MongoClient>;
+// Safe lazy MongoDB client — does not throw at import time when
+// MONGODB_URI is missing (only rejects when actually used).
 
 declare global {
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
-if (process.env.NODE_ENV === 'development') {
+export function getMongoClient(): Promise<MongoClient> {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) throw new Error("MONGODB_URI is not set");
+
   if (!global._mongoClientPromise) {
-    client = new MongoClient(uri);
+    const client = new MongoClient(uri);
     global._mongoClientPromise = client.connect();
   }
-  clientPromise = global._mongoClientPromise;
-} else {
-  client = new MongoClient(uri);
-  clientPromise = client.connect();
+  return global._mongoClientPromise;
 }
 
-export default clientPromise;
+export default getMongoClient;

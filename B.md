@@ -5,6 +5,14 @@ This document is the hardcoded recovery map. If any file in `lib/` or `data/` go
 
 ---
 
+## ⛔ HARD RULES — READ BEFORE TOUCHING ANYTHING
+
+1. **NO ANTHROPIC — JOK. NEVER.** Anthropic (Claude, `@anthropic-ai/sdk`, `ANTHROPIC_API_KEY`) is **NOT** to be used for dancehall/reggae info or for **ANY function** in this project. Not for grounding, not for chat, not for search, not for anything. If an LLM is needed, use Groq only (see `/api/knowledge`).
+2. **NO WIKIPEDIA FOR ARCHIVE INFO.** Wikipedia is NOT an acceptable source for dancehall info. The Global Riddim Index is built from the Archive only: MongoDB + local `public/riddims*.json` + verified archival documents.
+3. **ARCHIVE-FIRST / ARCHIVE-ONLY.** If the Archive has no record for a question, the bot must say the archive does not contain enough source data. Never invent, never scrape unreliable sources to fill gaps.
+
+---
+
 ## ⛔ LOCKED: app/page.tsx ⛔
 
 **THIS FILE IS LOCKED. DO NOT MODIFY. DO NOT DELETE.**
@@ -65,22 +73,27 @@ That is the ONLY acceptable recovery. No "improving" the page. No "refactoring" 
 │   │   ├── search/
 │   │   │   └── route.ts               # POST — scrapes 5 sources in parallel
 │   │   └── knowledge/
-│   │       └── route.ts               # POST — Groq LLM with DancehallMag grounding
+│   │       └── route.ts               # POST — Archive Ask Bot: entity store + local index + Riddims World + MongoDB → Groq (NO Wikipedia, NO Anthropic)
 │   └── test/
 │       └── page.tsx                    # Test page
 │
 ├── lib/
 │   ├── externalSearch.ts               # ⚠️ CORE ENGINE (680 lines, cheerio) — RiddimGuide, Riddim-ID, YouTube, local index
-│   ├── mongodb.ts                      # MongoDB connection helper
+│   ├── entities.mts                    # Archive entity store: artists/aliases/normalization (single source of truth)
+│   ├── archiveDb.ts                    # MongoDB 'artists' lookup for Archive Ask Bot
+│   ├── riddimsWorld.ts                 # Shared Riddims World catalog search (search + knowledge routes)
+│   ├── mongodb.ts                      # Safe lazy MongoDB connection helper
 │   ├── riddimDb.ts                     # Database query helpers
 │   └── riddimSchema.ts                 # Riddim data schema
 │
 ├── data/
-│   ├── seed.mjs                        # Database seed script
+│   ├── seed.mjs                        # Database seed script (riddims)
+│   ├── seedArtists.mjs                 # Seed 'artists' collection from lib/entities.mts
 │   └── seedRiddims.ts                  # Seed data definitions
 │
 ├── scripts/
-│   └── extract-vdj.mjs                 # VirtualDJ data extractor
+│   ├── extract-vdj.mjs                 # VirtualDJ data extractor
+│   └── knowledge.test.mjs              # Regression tests for Archive Ask Bot entity resolution
 │
 └── public/
     ├── riddims.json                    # Local VirtualDJ index (12KB)
@@ -173,16 +186,19 @@ Scrapes 5 sources in parallel: YouTube HTML, RiddimGuide, RiddimsWorld, Riddim-I
 
 ### POST /api/knowledge
 Body: `{ "query": "..." }`  
-Grounds queries against DancehallMag + Reggaeville, then answers via Groq Llama 3.3 70B. Requires `GROQ_API_KEY` in `.env.local`.
+Grounds queries against Archive sources only (local Global Riddim Index + DancehallMag), then answers via Groq. NO Wikipedia. NO Anthropic. Requires `GROQ_API_KEY` in `.env.local`.
 
 ---
 
 ## ENVIRONMENT VARIABLES (.env.local)
 
 ```
-GROQ_API_KEY=            # Required for /api/knowledge
+GROQ_API_KEY=            # Required for /api/knowledge (the ONLY allowed LLM provider)
 YT_API_KEY=              # Required for YouTube API in externalSearch
 MONGODB_URI=             # Required for MongoDB (lib/mongodb.ts)
+
+# ❌ ANTHROPIC_API_KEY — DO NOT USE. NOTHING in this project may call Anthropic/Claude.
+#    No dancehall info, no functions, no grounding, no chat. JOK — NEVER.
 ```
 
 ---
