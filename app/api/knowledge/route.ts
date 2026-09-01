@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { buildEntityContext, bareTopic } from "@/lib/entities.mts";
 import { fetchRiddimsWorld } from "@/lib/riddimsWorld";
+import { searchRegimeRadio, fetchRegimeRadioArticle } from "@/lib/regimeRadio";
 
 // ⛔ HARD RULES (B.md): NO ANTHROPIC. NO WIKIPEDIA. Archive data only.
 // LLM provider: Groq only.
@@ -120,6 +121,22 @@ async function riddimsWorldContext(topic: string): Promise<{ context: string; la
   };
 }
 
+// ── Regime Radio — riddim/single/sound-system archive (allowed source) ───
+async function regimeRadioContext(topic: string): Promise<{ context: string; label: string }> {
+  const term = topic.toLowerCase().replace(/\s+riddim\s*$/i, "").trim();
+  if (!term) return { context: "", label: "" };
+  const hits = await searchRegimeRadio(term, 5);
+  const posts: string[] = [];
+  for (const hit of hits.slice(0, 2)) {
+    const text = await fetchRegimeRadioArticle(hit.id);
+    if (text.length > 40) {
+      posts.push(`[Regime Radio archive document: ${hit.title}]\n${text.slice(0, 1200)}`);
+    }
+  }
+  if (!posts.length) return { context: "", label: "" };
+  return { context: posts.join("\n\n"), label: "Regime Radio" };
+}
+
 // ── Groq (the ONLY allowed LLM provider) ─────────────────────────────────
 // Current public Groq chat models per console.groq.com/docs/models.
 const MODELS = [
@@ -187,24 +204,28 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── Archive-only grounding: entity store + local riddim index + Riddims World + MongoDB ──
+  // ── Archive-only grounding: entity store + local riddim index + Riddims World + Regime Radio + MongoDB ──
   const topic = bareTopic(query);
   const entity = buildEntityContext(query, 6);
   // Local riddim index needs the cleaned topic ("tempo"), not the raw
   // question ("what is the tempo riddim"), or word matching never hits.
   const local = localRiddimContext(topic);
   const mongo = await mongoArchiveContext(topic);
-  // Riddims World is only useful for riddim/topic queries — skip it when a
-  // canonical artist/entity already resolved.
+  // External riddim/archive catalogs are only useful for riddim/topic queries —
+  // skip them when a canonical artist/entity already resolved.
   const rw = entity.resolved
     ? { context: "", label: "" }
     : await riddimsWorldContext(topic);
+  const rr = entity.resolved
+    ? { context: "", label: "" }
+    : await regimeRadioContext(topic);
 
-  const context = [entity.context, local, rw.context, mongo.context].filter(Boolean).join("\n\n");
+  const context = [entity.context, local, rw.context, rr.context, mongo.context].filter(Boolean).join("\n\n");
   const labels = [
     ...entity.labels,
     ...(local ? ["Global Riddim Index (local)"] : []),
     ...(rw.context ? [rw.label] : []),
+    ...(rr.context ? [rr.label] : []),
     ...mongo.labels,
   ];
 

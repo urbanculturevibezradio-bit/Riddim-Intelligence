@@ -82,6 +82,7 @@ That is the ONLY acceptable recovery. No "improving" the page. No "refactoring" 
 │   ├── entities.mts                    # Archive entity store: artists/aliases/normalization (single source of truth)
 │   ├── archiveDb.ts                    # MongoDB 'artists' lookup for Archive Ask Bot
 │   ├── riddimsWorld.ts                 # Shared Riddims World catalog search (search + knowledge routes)
+│   ├── regimeRadio.ts                  # Regime Radio (regimeradio.com) archive search — current + classic riddims
 │   ├── mongodb.ts                      # Safe lazy MongoDB connection helper
 │   ├── riddimDb.ts                     # Database query helpers
 │   └── riddimSchema.ts                 # Riddim data schema

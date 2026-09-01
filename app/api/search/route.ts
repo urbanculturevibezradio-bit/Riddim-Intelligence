@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { fetchRiddimsWorld } from "@/lib/riddimsWorld";
+import { searchRegimeRadio } from "@/lib/regimeRadio";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
 
@@ -94,6 +95,19 @@ async function searchRiddimsWorld(query: string) {
   });
 }
 
+// ── Regime Radio ───────────────────────────────────
+
+async function searchRegimeRadioSource(query: string) {
+  const hits = await searchRegimeRadio(query, 15);
+  return hits.map(({ title, url }) => ({
+    name: title,
+    label: "",
+    source: "regimeradio",
+    url,
+    tracks: [],
+  }));
+}
+
 // ── Riddim-ID ──────────────────────────────────────
 
 async function searchRiddimID(query: string) {
@@ -133,10 +147,11 @@ export async function POST(req: NextRequest) {
   const { query } = await req.json();
   if (!query) return NextResponse.json({ error: "No query" }, { status: 400 });
 
-  const [youtube, riddimguide, riddimsworld, riddimid, local] = await Promise.all([
+  const [youtube, riddimguide, riddimsworld, regimeradio, riddimid, local] = await Promise.all([
     searchYouTube(query),
     searchRiddimGuide(query),
     searchRiddimsWorld(query),
+    searchRegimeRadioSource(query),
     searchRiddimID(query),
     Promise.resolve(searchLocal(query)),
   ]);
@@ -147,14 +162,16 @@ export async function POST(req: NextRequest) {
       youtube: youtube.length,
       riddimguide: riddimguide.length,
       riddimsworld: riddimsworld.length,
+      regimeradio: regimeradio.length,
       riddimid: riddimid.length,
       local: local.length,
     },
     youtube,
     riddimguide,
     riddimsworld,
+    regimeradio,
     riddimid,
     local,
-    total: youtube.length + riddimguide.length + riddimsworld.length + riddimid.length + local.length,
+    total: youtube.length + riddimguide.length + riddimsworld.length + regimeradio.length + riddimid.length + local.length,
   });
 }
