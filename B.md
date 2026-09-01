@@ -73,7 +73,7 @@ That is the ONLY acceptable recovery. No "improving" the page. No "refactoring" 
 │   │   ├── search/
 │   │   │   └── route.ts               # POST — scrapes 5 sources in parallel
 │   │   └── knowledge/
-│   │       └── route.ts               # POST — Archive Ask Bot: entity store + local index + Riddims World + MongoDB → Groq (NO Wikipedia, NO Anthropic)
+│   │       └── route.ts               # POST — Archive Ask Bot: entity store + local index + Riddims World + Regime Radio + MongoDB → Groq (NO Wikipedia, NO Anthropic)
 │   └── test/
 │       └── page.tsx                    # Test page
 │
