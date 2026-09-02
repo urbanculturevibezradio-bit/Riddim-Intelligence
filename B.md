@@ -215,10 +215,13 @@ npm run seed:archive
 - Database: `riddim-intelligence`
 - Collection: `artists`
 - Requires a **valid** `MONGODB_URI` in `.env.local` (or the environment).
-- ⚠️ STATUS 2026-09-01: the local credential files in `Documents/`
-  (`mongodb+srvurbanculturevibezradio_d.txt` + `Mongo strig conn pw.txt`)
-  are STALE — MongoDB Atlas rejects them with `bad auth : authentication failed`.
-  Get the current `MONGODB_URI` before running the seed.
+- ⚠️ STATUS 2026-09-02: ALL known copies of the MongoDB credentials are STALE.
+  Proven by testing in the Vercel runtime itself (temporary `/api/seed-archive`
+  endpoint, since removed): Vercel's stored `MONGODB_URI` also returns
+  `bad auth : authentication failed`. The local `Documents/` credential files
+  and the pasted URI fail the same way. **Fix: in MongoDB Atlas, reset the
+  password for user `urbanculturevibezradio_db_user` (or create a new user) on
+  cluster `urban-pro-link-db`, then update `MONGODB_URI` in Vercel and `.env.local`.**
 - The Archive Ask Bot does NOT depend on this seed: the curated entity store
   ships inside `lib/entities.mts`, so major artists answer correctly even with
   MongoDB down. The seed is enrichment only.
