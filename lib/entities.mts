@@ -3,9 +3,27 @@
 // Single source of truth for the Archive Ask Bot entity resolution.
 // Pure ESM TypeScript with erasable-only syntax so Node can run it directly.
 
+// Personal/community knowledge lives in PERSONAL-KNOWLEDGE.mts (repo root)
+// for easy access. It is merged into this store automatically.
+import { PERSONAL_ENTITIES } from "../PERSONAL-KNOWLEDGE.mts";
+
 export interface ArchiveEntity {
   id: string;
-  type: "artist" | "producer" | "label" | "sound system" | "event" | "era";
+  type:
+    | "artist"
+    | "producer"
+    | "label"
+    | "sound system"
+    | "event"
+    | "era"
+    | "dance"
+    | "venue"
+    | "term"
+    | "radio"
+    | "personality"
+    | "movement"
+    | "place"
+    | "other";
   name: string;
   realName?: string;
   aliases?: string[];
@@ -17,6 +35,8 @@ export interface ArchiveEntity {
   bio: string;
   related?: string[];
   verified?: boolean;
+  /** Where the record came from: curated | oral-history | first-hand | personal */
+  source?: string;
 }
 
 // ── CURATED CANON — verified dancehall/reggae archive records ─────────────
@@ -376,6 +396,7 @@ export const ARCHIVE_ENTITIES: ArchiveEntity[] = [
     related: ["Bounty Killer", "Beenie Man", "Ninjaman", "Buju Banton", "Dave Kelly"],
     verified: true,
   },
+  ...PERSONAL_ENTITIES,
 ];
 
 // ── NORMALIZATION ────────────────────────────────────────────────────────

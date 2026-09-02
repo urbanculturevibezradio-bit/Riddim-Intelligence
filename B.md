@@ -53,6 +53,7 @@ That is the ONLY acceptable recovery. No "improving" the page. No "refactoring" 
 ├── AGENTS.md                           # Next.js agent rules
 ├── CLAUDE.md                           # -> @AGENTS.md
 ├── B.md                                # THIS FILE — recovery map
+├── PERSONAL-KNOWLEDGE.mts              # YOUR dancehall knowledge (edit + npm run seed:archive)
 ├── README.md
 ├── package.json
 ├── package-lock.json
@@ -229,6 +230,30 @@ npm run seed:archive
   ships inside `lib/entities.mts`, so major artists answer correctly even with
   MongoDB down. The seed is enrichment only.
 - Archive data only. NO Wikipedia. NO Anthropic.
+
+---
+
+## 🧠 PERSONAL KNOWLEDGE FILE (yours — edit freely)
+
+**File:** `PERSONAL-KNOWLEDGE.mts` (repo root, hard to miss)
+
+This is where YOUR dancehall knowledge goes — oral history, first-hand accounts,
+artists, clashes, dances, venues, radio, eras, terms. It is **automatically merged**
+into the Archive Ask Bot entity store (`lib/entities.mts`) and into the MongoDB
+`artists` collection.
+
+Workflow:
+1. Open `PERSONAL-KNOWLEDGE.mts`
+2. Copy the TEMPLATE block inside the file, fill it in, paste it into the `[ ... ]` array
+3. Run: `npm run seed:archive`
+4. The bot now answers from your entry (code + Mongo)
+
+- Only `id`, `type`, `name`, `bio` are required.
+- Allowed types: artist, producer, label, sound system, event, era, dance,
+  venue, term, radio, personality, movement, place, other.
+- Use `source: "oral-history"` / `"first-hand"` / `"personal"` for your entries.
+- The 26 curated canon records stay in `lib/entities.mts`; your entries stay
+  in your file. One seed command updates both.
 
 ---
 
