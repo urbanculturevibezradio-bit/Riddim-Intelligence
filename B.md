@@ -215,18 +215,16 @@ npm run seed:archive
 - Database: `riddim-intelligence`
 - Collection: `artists`
 - Requires a **valid** `MONGODB_URI` in `.env.local` (or the environment).
-- ⚠️ STATUS 2026-09-02: ALL known copies of the MongoDB credentials are STALE.
-  Proven by testing in the Vercel runtime itself (temporary `/api/seed-archive`
-  endpoint, since removed): Vercel's stored `MONGODB_URI` also returns
-  `bad auth : authentication failed`. The local `Documents/` credential files
-  and the pasted URI fail the same way. **Fix: in MongoDB Atlas, reset the
-  password for user `urbanculturevibezradio_db_user` (or create a new user) on
-  cluster `urban-pro-link-db`, then update `MONGODB_URI` in Vercel and `.env.local`.**
-- ⚠️ CROSS-PROJECT WARNING: the Vercel team has TWO projects with `MONGODB_URI`:
-  `riddim-intelligence` and `urban-pro-link-frontend-zsmk` (the ProLink business
-  site). If both point at the same Atlas cluster/user, resetting that password
-  affects BOTH — update both projects' env vars. Safer: create a NEW dedicated
-  Atlas database user for `riddim-intelligence` instead of changing the shared one.
+- ✅ STATUS 2026-09-02 RESOLVED: the stored password in the riddim project was
+  simply the wrong one — it never matched Atlas. The working credential for the
+  same user (`urbanculturevibezradio_db_user`) lives in the ProLink project's
+  `.env.local` (`C:\Users\New Owner\urban-pro-link-frontend\.env.local`).
+  Fixed by pointing `MONGODB_URI` at database `riddim-intelligence` with the
+  ProLink password — **no Atlas password was changed**. Seed ran successfully:
+  26 entities written to `artists`. Cluster contents confirmed:
+  `riddim-intelligence` → `riddims`, `queries`, `artists`.
+- Same cluster/user is shared with ProLink (`urban-pro-link-db`), so leave the
+  existing Atlas password alone and keep the riddim URI in sync with ProLink's.
 - The Archive Ask Bot does NOT depend on this seed: the curated entity store
   ships inside `lib/entities.mts`, so major artists answer correctly even with
   MongoDB down. The seed is enrichment only.
