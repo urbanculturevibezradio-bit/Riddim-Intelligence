@@ -222,6 +222,11 @@ npm run seed:archive
   and the pasted URI fail the same way. **Fix: in MongoDB Atlas, reset the
   password for user `urbanculturevibezradio_db_user` (or create a new user) on
   cluster `urban-pro-link-db`, then update `MONGODB_URI` in Vercel and `.env.local`.**
+- ⚠️ CROSS-PROJECT WARNING: the Vercel team has TWO projects with `MONGODB_URI`:
+  `riddim-intelligence` and `urban-pro-link-frontend-zsmk` (the ProLink business
+  site). If both point at the same Atlas cluster/user, resetting that password
+  affects BOTH — update both projects' env vars. Safer: create a NEW dedicated
+  Atlas database user for `riddim-intelligence` instead of changing the shared one.
 - The Archive Ask Bot does NOT depend on this seed: the curated entity store
   ships inside `lib/entities.mts`, so major artists answer correctly even with
   MongoDB down. The seed is enrichment only.
