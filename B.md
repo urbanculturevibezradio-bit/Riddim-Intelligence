@@ -256,6 +256,43 @@ Workflow:
 - The 26 curated canon records stay in `lib/entities.mts`; your entries stay
   in your file. One seed command updates both.
 
+### 📋 Runbook: archive an artist the bot only knows from live research
+
+When the bot answers a question in **live mode** (`"mode": "live"`) and the
+answer is thin — or when you simply want the Archive to own an artist/event —
+do this:
+
+1. **Gather the facts** (web search, liner notes, oral history — your call).
+2. **Add an entry** to `PERSONAL-KNOWLEDGE.mts` using the TEMPLATE. Example:
+
+```ts
+{
+  id: "roots-by-nature",
+  type: "artist",
+  name: "Roots By Nature",
+  aliases: ["Roots by Nature"],
+  born: "Founded 2007",
+  origin: "Accra, Ghana / Stockholm, Sweden",
+  era: "2000s–present",
+  role: "Roots-reggae band",
+  notableSongs: ["Forward", "Dubward", "Walks Of Life"],
+  bio: "Oral history: Roots By Nature is a conscious roots-reggae project formed in 2007 in Accra, Ghana by vocalist Amira El Sineity and Ghanaian singer/songwriter Nana Kwame Nkwantabisa, and based in Stockholm, Sweden. The group mixes Jamaican roots reggae with West African identity. Key releases include the debut album 'Walks Of Life' (2010), 'Untold Story (Kunta Kinte)' (2019/2020, Serengeti Music EU), and the single 'Forward' / 'Dubward' (2025, Earthworks Amsterdam). Nkwantabisa also records acoustic Ghanaian music as 'Volta Blues'.",
+  related: ["Suns of Dub", "Volta Blues"],
+  source: "first-hand",
+  verified: true,
+},
+```
+
+3. **Seed it:**
+```bash
+cd C:\Users\New Owner\Documents\Riddim-Intelligence
+npm run seed:archive
+```
+
+4. **Verify:** ask the bot the same question — the response should now come
+   back with `"mode": "archive"` (the Archive won) instead of `"mode": "live"`.
+   Commit + push to deploy the change (the entries also ship in code).
+
 ---
 
 ## STARTUP
