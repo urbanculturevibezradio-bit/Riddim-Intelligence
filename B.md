@@ -9,7 +9,7 @@ This document is the hardcoded recovery map. If any file in `lib/` or `data/` go
 
 1. **NO ANTHROPIC — JOK. NEVER.** Anthropic (Claude, `@anthropic-ai/sdk`, `ANTHROPIC_API_KEY`) is **NOT** to be used for dancehall/reggae info or for **ANY function** in this project. Not for grounding, not for chat, not for search, not for anything. If an LLM is needed, use Groq only (see `/api/knowledge`).
 2. **NO WIKIPEDIA FOR ARCHIVE INFO.** Wikipedia is NOT an acceptable source for dancehall info. The Global Riddim Index is built from the Archive only: MongoDB + local `public/riddims*.json` + verified archival documents.
-3. **ARCHIVE-FIRST, LIVE-RESEARCH FALLBACK (full agent).** The Archive is the authoritative source for curated/oral-history records — special info, events, eras, first-hand knowledge. If the Archive has no record for a question, the bot MAY answer from LIVE WEB RESEARCH (`lib/webResearch.ts`: DuckDuckGo HTML primary, Bing fallback — reliable public sources only, Wikipedia filtered out). Live answers must be attributed to "current public records", never to the Archive. Archive answers are unchanged. Never invent. NEVER Wikipedia. NEVER Anthropic.
+3. **ARCHIVE-FIRST, LIVE-RESEARCH FALLBACK (full agent).** The Archive is the authoritative source for curated/oral-history records — special info, events, eras, first-hand knowledge. If the Archive has no strong record for a question, the bot MAY answer from LIVE WEB RESEARCH (`lib/webResearch.ts`: ScraperAPI-proxied Bing primary, direct Bing + DuckDuckGo HTML fallbacks, exact-phrase relevance filter — reliable public sources only, Wikipedia filtered out). Live answers must be attributed to "current public records", never to the Archive. Archive answers are unchanged. Never invent. NEVER Wikipedia. NEVER Anthropic.
 
 ---
 
@@ -80,7 +80,7 @@ That is the ONLY acceptable recovery. No "improving" the page. No "refactoring" 
 │
 ├── lib/
 │   ├── externalSearch.ts               # ⚠️ CORE ENGINE (680 lines, cheerio) — RiddimGuide, Riddim-ID, YouTube, local index
-│   ├── webResearch.ts                  # Full-agent live research: DuckDuckGo HTML + Bing fallback (no keys, Wikipedia filtered)
+│   ├── webResearch.ts                  # Full-agent live research: ScraperAPI→Bing + direct Bing/DDG, exact-phrase filter (Wikipedia filtered)
 │   ├── entities.mts                    # Archive entity store: artists/aliases/normalization (single source of truth)
 │   ├── archiveDb.ts                    # MongoDB 'artists' lookup for Archive Ask Bot
 │   ├── riddimsWorld.ts                 # Shared Riddims World catalog search (search + knowledge routes)
@@ -189,7 +189,7 @@ Scrapes 5 sources in parallel: YouTube HTML, RiddimGuide, RiddimsWorld, Riddim-I
 
 ### POST /api/knowledge
 Body: `{ "query": "..." }`  
-Archive Ask Bot. Archive-first: grounds queries against the entity store (`lib/entities.mts`) + local Global Riddim Index + Riddims World + Regime Radio + MongoDB `artists`. If the Archive has no record, it answers from LIVE WEB RESEARCH (`lib/webResearch.ts` — DuckDuckGo HTML primary, Bing fallback; Wikipedia filtered out). Then answers via Groq. NO Wikipedia. NO Anthropic. Requires `GROQ_API_KEY` in `.env.local`.
+Archive Ask Bot. Archive-first: grounds queries against the entity store (`lib/entities.mts`) + local Global Riddim Index + Riddims World + Regime Radio + MongoDB `artists`. If the Archive has no strong record, it answers from LIVE WEB RESEARCH (`lib/webResearch.ts` — ScraperAPI-proxied Bing primary, direct Bing + DuckDuckGo HTML fallbacks, exact-phrase filter; Wikipedia filtered out). Then answers via Groq. NO Wikipedia. NO Anthropic. Requires `GROQ_API_KEY` in `.env.local`.
 
 ---
 
