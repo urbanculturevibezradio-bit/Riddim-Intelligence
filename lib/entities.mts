@@ -1,5 +1,5 @@
 // lib/entities.mts — Caribbean Sound Archive entity store
-// ⛔ HARD RULES (see B.md): NO ANTHROPIC. NO WIKIPEDIA. Archive data only.
+// ⛔ HARD RULES (see B.md): NO ANTHROPIC. NO WIKIPEDIA. Archive-first; live web research fills gaps.
 // Single source of truth for the Archive Ask Bot entity resolution.
 // Pure ESM TypeScript with erasable-only syntax so Node can run it directly.
 

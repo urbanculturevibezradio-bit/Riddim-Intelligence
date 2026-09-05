@@ -1,5 +1,5 @@
 // PERSONAL-KNOWLEDGE.mts — YOUR DANCEHALL KNOWLEDGE FILE (repo root, easy access)
-// ⛔ HARD RULES (see B.md): NO ANTHROPIC. NO WIKIPEDIA. Archive data only.
+// ⛔ HARD RULES (see B.md): NO ANTHROPIC. NO WIKIPEDIA. Archive-first; live web research fills gaps.
 //
 // WHAT THIS IS:
 //   Everything YOU know about dancehall/reggae culture — artists, producers,

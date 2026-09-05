@@ -4,15 +4,17 @@ import path from "path";
 import { buildEntityContext, bareTopic } from "@/lib/entities.mts";
 import { fetchRiddimsWorld } from "@/lib/riddimsWorld";
 import { searchRegimeRadio, fetchRegimeRadioArticle } from "@/lib/regimeRadio";
+import { webResearchContext } from "@/lib/webResearch";
 
-// ⛔ HARD RULES (B.md): NO ANTHROPIC. NO WIKIPEDIA. Archive data only.
+// ⛔ HARD RULES (B.md): NO ANTHROPIC. NO WIKIPEDIA. Archive-first.
+// Live web research is allowed ONLY when the Archive has no record.
 // LLM provider: Groq only.
 
 const GROQ_KEY = process.env.GROQ_API_KEY || "";
 
 const AGENT = `You are the Cultural Intelligence Officer of the Caribbean Sound Archive — part of Riddim Intelligence, the Global Master Audio Archive.
 
-Your domain: Caribbean music culture, history, and events — dancehall, reggae, artists, deejays, producers, labels, sound systems, clashes, riddims, and eras.
+Your domain: reggae and dancehall music culture worldwide — the Caribbean, Africa (including Ghana and West Africa), and the diaspora — artists, deejays, producers, labels, sound systems, clashes, riddims, eras, and events.
 
 Tone:
 - Formal archival authority, like a senior curator at a national sound archive
@@ -21,10 +23,10 @@ Tone:
 - Use phrases like: "According to archival records...", "The pressing logs indicate...", "Oral history preserved in the Archive documents..."
 
 RULES (in order of importance):
-1. ANSWER FROM THE ARCHIVE RECORDS PROVIDED BELOW ONLY. They are your sole factual basis. Use their specific details — names, dates, eras, recordings, and history. Do not add outside knowledge and do not invent details that are not in the records.
-2. If the records provided do not contain an answer to the user's query, say exactly that the archival records are inconclusive and that the Caribbean Sound Archive does not yet contain enough source data to answer. Never guess.
-3. If NO records were provided at all, do not invent facts. State that the Archive does not contain enough source data for this inquiry, and invite the user to ask about riddims, artists, producers, labels, sound systems, clashes, or eras that the Archive holds.
-4. Never fabricate names, dates, winners, venues, or quotes. If the user asks about something outside Caribbean music culture, redirect gracefully.
+1. ARCHIVE EXCERPTS — sections labeled "Caribbean Sound Archive", "Global Riddim Index", "Riddims World", or "Regime Radio" — are the Archive's authoritative records. When any are provided, answer from them ONLY. Do not add outside knowledge and do not invent details that are not in the records.
+2. LIVE RESEARCH EXCERPTS — a section labeled "LIVE RESEARCH — external web" — are current public records gathered only when the Archive has no record. When ONLY live research excerpts are provided (no archive excerpts), answer from them. Attribute the answer to current public records (for example: "According to current public records..."). Never present live research as the Archive's curated holdings, and never reveal the source websites.
+3. If neither archive excerpts nor live research excerpts contain an answer, say exactly that the records are inconclusive and that the Archive does not yet contain enough source data to answer. Never guess.
+4. Never fabricate names, dates, winners, venues, or quotes. If the user asks about something outside reggae/dancehall music culture, redirect gracefully.
 5. Keep answers concise (2-5 sentences) but rich with the details the records actually contain.`;
 
 // ── Local Global Riddim Index (public/*.json) — canonical riddim catalog ──
@@ -204,7 +206,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── Archive-only grounding: entity store + local riddim index + Riddims World + Regime Radio + MongoDB ──
+  // ── Archive-first grounding: entity store + local riddim index + Riddims World + Regime Radio + MongoDB ──
   const topic = bareTopic(query);
   const entity = buildEntityContext(query, 6);
   // Local riddim index needs the cleaned topic ("tempo"), not the raw
@@ -220,8 +222,10 @@ export async function POST(req: NextRequest) {
     ? { context: "", label: "" }
     : await regimeRadioContext(topic);
 
-  const context = [entity.context, local, rw.context, rr.context, mongo.context].filter(Boolean).join("\n\n");
-  const labels = [
+  const archiveContext = [entity.context, local, rw.context, rr.context, mongo.context]
+    .filter(Boolean)
+    .join("\n\n");
+  const archiveLabels = [
     ...entity.labels,
     ...(local ? ["Global Riddim Index (local)"] : []),
     ...(rw.context ? [rw.label] : []),
@@ -229,8 +233,18 @@ export async function POST(req: NextRequest) {
     ...mongo.labels,
   ];
 
+  // ── Full-agent fallback: if the Archive has no record, go find out live ──
+  let live = { context: "", label: "" };
+  if (!archiveContext) {
+    live = await webResearchContext(topic || query);
+  }
+
+  const context = [archiveContext, live.context].filter(Boolean).join("\n\n");
+  const labels = [...archiveLabels, ...(live.context ? [live.label] : [])];
+  const mode: "archive" | "live" = live.context && !archiveContext ? "live" : "archive";
+
   const userMessage = context
-    ? `ARCHIVAL SOURCE EXCERPTS (answer strictly from these):\n\n${context}\n\n---\nUSER QUERY: ${query}`
+    ? `GROUNDING EXCERPTS (answer strictly from these):\n\n${context}\n\n---\nUSER QUERY: ${query}`
     : query;
 
   const errors: string[] = [];
@@ -255,8 +269,12 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
           query,
           answer,
-          source: "Caribbean Sound Archive — Global Riddim Index",
+          source:
+            mode === "live"
+              ? "Riddim Intelligence — Live Research"
+              : "Caribbean Sound Archive — Global Riddim Index",
           model,
+          mode,
           grounding: labels,
         });
       }
@@ -271,6 +289,7 @@ export async function POST(req: NextRequest) {
     answer: "The Archive is temporarily unavailable. Consult the pressing logs directly.",
     source: "Caribbean Sound Archive — Global Riddim Index",
     error: errors.join(" | ") || "Unknown Groq failure",
+    mode,
     grounding: labels,
   });
 }
