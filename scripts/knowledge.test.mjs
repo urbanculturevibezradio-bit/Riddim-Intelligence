@@ -8,6 +8,7 @@ import {
   resolveEntity,
   buildEntityContext,
   searchEntities,
+  topEntityScore,
   ARCHIVE_ENTITIES,
 } from "../lib/entities.mts";
 
@@ -91,4 +92,13 @@ test("archive store contains all required major artists", () => {
   ]) {
     assert.ok(names.has(n), `missing archive record: ${n}`);
   }
+});
+
+test("topEntityScore separates real archive topics from keyword noise", () => {
+  // Real broad archive topics score high enough to stay in the Archive.
+  assert.ok(topEntityScore("Tell me about Jamaican sound clash culture.") >= 2);
+  assert.ok(topEntityScore("Who are the pioneers of dub music?") >= 2);
+  // Unknown names must score low so /api/knowledge falls through to live research.
+  assert.ok(topEntityScore("Who is Roots By Nature?") < 2);
+  assert.ok(topEntityScore("Who is Stonebwoy?") < 2);
 });

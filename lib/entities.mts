@@ -464,37 +464,67 @@ export function resolveEntity(query: string): ArchiveEntity | null {
   return best;
 }
 
+const ENTITY_STOPWORDS = new Set([
+  "who", "what", "when", "where", "how", "why", "the", "are", "was",
+  "were", "did", "does", "about", "tell", "some",
+]);
+
+function queryWords(query: string): string[] {
+  return normalizeEntityText(query)
+    .split(" ")
+    .filter((w) => w.length > 2 && !ENTITY_STOPWORDS.has(w));
+}
+
+function entityScore(entity: ArchiveEntity, bare: string, words: string[]): number {
+  const hay = normalizeEntityText(
+    [
+      entity.name,
+      entity.realName,
+      entity.type,
+      entity.era,
+      entity.role,
+      entity.bio,
+      ...(entity.aliases ?? []),
+      ...(entity.notableSongs ?? []),
+      ...(entity.related ?? []),
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
+
+  let score = 0;
+  if (hay.includes(bare)) score += 10;
+  for (const w of words) {
+    if (hay.includes(w)) score += 1;
+  }
+  return score;
+}
+
+/**
+ * Top keyword-match score for a query. High scores mean the Archive genuinely
+ * covers the topic (broad questions); low scores (1) are usually keyword noise
+ * like "roots" in a bio — those should fall through to live web research.
+ */
+export function topEntityScore(query: string): number {
+  const bare = bareTopic(query);
+  const words = queryWords(query);
+  let best = 0;
+  for (const entity of ARCHIVE_ENTITIES) {
+    const s = entityScore(entity, bare, words);
+    if (s > best) best = s;
+  }
+  return best;
+}
+
 /** Keyword search across all entity fields for broader archive questions. */
 export function searchEntities(query: string, max = 6): ArchiveEntity[] {
   const bare = bareTopic(query);
-  const words = normalizeEntityText(query)
-    .split(" ")
-    .filter((w) => w.length > 2 && !["who", "what", "when", "where", "how", "why", "the", "are", "was", "were", "did", "does", "about", "tell", "some"].includes(w));
+  const words = queryWords(query);
 
-  const scored = ARCHIVE_ENTITIES.map((entity) => {
-    const hay = normalizeEntityText(
-      [
-        entity.name,
-        entity.realName,
-        entity.type,
-        entity.era,
-        entity.role,
-        entity.bio,
-        ...(entity.aliases ?? []),
-        ...(entity.notableSongs ?? []),
-        ...(entity.related ?? []),
-      ]
-        .filter(Boolean)
-        .join(" ")
-    );
-
-    let score = 0;
-    if (hay.includes(bare)) score += 10;
-    for (const w of words) {
-      if (hay.includes(w)) score += 1;
-    }
-    return { entity, score };
-  })
+  const scored = ARCHIVE_ENTITIES.map((entity) => ({
+    entity,
+    score: entityScore(entity, bare, words),
+  }))
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, max)

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { buildEntityContext, bareTopic } from "@/lib/entities.mts";
+import { buildEntityContext, bareTopic, topEntityScore } from "@/lib/entities.mts";
 import { fetchRiddimsWorld } from "@/lib/riddimsWorld";
 import { searchRegimeRadio, fetchRegimeRadioArticle } from "@/lib/regimeRadio";
 import { webResearchContext } from "@/lib/webResearch";
@@ -233,15 +233,28 @@ export async function POST(req: NextRequest) {
     ...mongo.labels,
   ];
 
-  // ── Full-agent fallback: if the Archive has no record, go find out live ──
+  // ── Strong archive match? Archive wins. Weak keyword noise does not count ──
+  // entity.resolved      → canonical artist/era/etc. record
+  // local                → canonical riddim index hit
+  // mongo.context        → Mongo archive record
+  // topEntityScore >= 2  → genuine broad archive topic (noise usually scores 1)
+  // riddim queries       → Riddims World / Regime Radio are authoritative
+  const strongArchive =
+    !!entity.resolved ||
+    !!local ||
+    !!mongo.context ||
+    topEntityScore(query) >= 2 ||
+    (/\briddim\b/i.test(query) && (!!rw.context || !!rr.context));
+
+  // ── Full-agent fallback: no strong archive record → go find out live ──
   let live = { context: "", label: "" };
-  if (!archiveContext) {
+  if (!strongArchive) {
     live = await webResearchContext(topic || query);
   }
 
-  const context = [archiveContext, live.context].filter(Boolean).join("\n\n");
-  const labels = [...archiveLabels, ...(live.context ? [live.label] : [])];
-  const mode: "archive" | "live" = live.context && !archiveContext ? "live" : "archive";
+  const context = strongArchive ? archiveContext : live.context;
+  const labels = strongArchive ? archiveLabels : live.context ? [live.label] : [];
+  const mode: "archive" | "live" = strongArchive ? "archive" : live.context ? "live" : "archive";
 
   const userMessage = context
     ? `GROUNDING EXCERPTS (answer strictly from these):\n\n${context}\n\n---\nUSER QUERY: ${query}`
